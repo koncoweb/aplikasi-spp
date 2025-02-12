@@ -5,7 +5,6 @@ import { Pembayaran } from '../types/pembayaran';
 import { Siswa } from '../types/student';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import dayjs from 'dayjs';
 
 interface PenagihanFormProps {
     initialValues?: Penagihan;
@@ -32,15 +31,7 @@ const PenagihanForm: React.FC<PenagihanFormProps> = ({
     useEffect(() => {
         fetchPembayaran();
         fetchSiswa();
-        if (initialValues) {
-            // Convert date fields to dayjs objects
-            const formValues = {
-                ...initialValues,
-                tanggal_tagihan: initialValues.tanggal_tagihan ? dayjs(initialValues.tanggal_tagihan) : undefined,
-                tanggal_bayar: initialValues.tanggal_bayar ? dayjs(initialValues.tanggal_bayar) : undefined
-            };
-            form.setFieldsValue(formValues);
-        }
+        form.setFieldsValue(initialValues);
     }, [initialValues, form]);
 
     const fetchPembayaran = async () => {
@@ -91,21 +82,18 @@ const PenagihanForm: React.FC<PenagihanFormProps> = ({
         }
     };
 
-    const handleFinish = (values: any) => {
-        // Convert dayjs objects back to Date objects before submitting
-        const submittedValues = {
-            ...values,
-            tanggal_tagihan: values.tanggal_tagihan?.toDate(),
-            tanggal_bayar: values.tanggal_bayar?.toDate()
-        };
-        onSubmit(submittedValues);
-    };
-
     return (
         <Form
             form={form}
             layout="vertical"
-            onFinish={handleFinish}
+            onFinish={(values) => {
+                const pembayaran = pembayaranList.find(p => p.id === values.pembayaran_id);
+                onSubmit({
+                    ...values,
+                    nama_pembayaran: pembayaran?.nama || '',
+                    nama_penagihan: values.nama_penagihan
+                });
+            }}
             initialValues={initialValues}
         >
             {isBatch ? (

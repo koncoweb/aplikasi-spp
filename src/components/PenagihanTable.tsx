@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Button, Space, Tag, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons';
 import { Penagihan } from '../types/penagihan';
 
 interface PenagihanTableProps {
@@ -9,6 +9,7 @@ interface PenagihanTableProps {
     onEdit: (record: Penagihan) => void;
     onDelete: (id: string) => void;
     onPrint: (record: Penagihan) => React.ReactNode;
+    onRowClick: (record: Penagihan) => void;
 }
 
 const formatCurrency = (value: number | null | undefined): string => {
@@ -23,22 +24,9 @@ const PenagihanTable: React.FC<PenagihanTableProps> = ({
     loading,
     onEdit,
     onDelete,
-    onPrint
+    onPrint,
+    onRowClick
 }) => {
-    const handleEdit = (e: React.MouseEvent, record: Penagihan) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onEdit(record);
-    };
-
-    const handleDelete = (e: React.MouseEvent | undefined, id: string) => {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        onDelete(id);
-    };
-
     const columns = [
         {
             title: 'Nama Penagihan',
@@ -95,18 +83,18 @@ const PenagihanTable: React.FC<PenagihanTableProps> = ({
             title: 'Aksi',
             key: 'action',
             render: (_: any, record: Penagihan) => (
-                <Space size="middle" onClick={e => e.stopPropagation()}>
+                <Space size="middle" onClick={(e) => e.stopPropagation()}>
                     <Button
                         type="primary"
                         icon={<EditOutlined />}
-                        onClick={(e) => handleEdit(e, record)}
+                        onClick={() => onEdit(record)}
                     >
                         Edit
                     </Button>
                     {onPrint(record)}
                     <Popconfirm
                         title="Apakah Anda yakin ingin menghapus data ini?"
-                        onConfirm={(e) => handleDelete(e, record.id!)}
+                        onConfirm={() => record.id && onDelete(record.id)}
                         okText="Ya"
                         cancelText="Tidak"
                     >
@@ -130,7 +118,11 @@ const PenagihanTable: React.FC<PenagihanTableProps> = ({
             loading={loading}
             rowKey="id"
             onRow={(record) => ({
-                onClick: (e) => handleEdit(e, record),
+                onClick: (e) => {
+                    if (!(e.target as HTMLElement).closest('.ant-space')) {
+                        onRowClick(record);
+                    }
+                },
                 style: { cursor: 'pointer' }
             })}
         />

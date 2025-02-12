@@ -3,8 +3,7 @@
 Aplikasi manajemen SPP Sekolah berbasis web menggunakan React, TypeScript, dan Firebase.
 
 ## Persiapan Awal
-username: admin@email.com
-password: admin123
+
 ### 1. Konfigurasi Firebase
 
 1. Buat project baru di [Firebase Console](https://console.firebase.google.com/)

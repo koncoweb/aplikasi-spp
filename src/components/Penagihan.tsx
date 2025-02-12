@@ -10,6 +10,7 @@ import PenagihanTable from './PenagihanTable';
 import PenagihanForm from './PenagihanForm';
 import PenagihanPDF from './PenagihanPDF';
 import BulkPenagihanForm from './BulkPenagihanForm';
+import PenagihanDetails from './PenagihanDetails';
 
 const PenagihanPage: React.FC = () => {
     const [penagihan, setPenagihan] = useState<Penagihan[]>([]);
@@ -18,6 +19,8 @@ const PenagihanPage: React.FC = () => {
     const [bulkModalVisible, setBulkModalVisible] = useState(false);
     const [selectedPenagihan, setSelectedPenagihan] = useState<Penagihan | undefined>();
     const [kelasList, setKelasList] = useState<KelasType[]>([]);
+    const [detailsVisible, setDetailsVisible] = useState(false);
+    const [selectedForDetails, setSelectedForDetails] = useState<Penagihan | undefined>();
 
     const fetchPenagihan = async () => {
         setLoading(true);
@@ -65,9 +68,9 @@ const PenagihanPage: React.FC = () => {
 
             const penagihanData = {
                 ...values,
-                tanggal_tagihan: values.tanggal_tagihan || now,
-                tanggal_bayar: values.tanggal_bayar || null,
-                status: 'belum_bayar',
+                tanggal_tagihan: values.tanggal_tagihan ? new Date(values.tanggal_tagihan) : now,
+                tanggal_bayar: values.tanggal_bayar ? new Date(values.tanggal_bayar) : null,
+                status: values.status || 'belum_bayar',
                 createdAt: now,
                 updatedAt: now,
                 createdBy: 'current_user',
@@ -83,7 +86,10 @@ const PenagihanPage: React.FC = () => {
             };
 
             if (selectedPenagihan?.id) {
-                await updateDoc(doc(db, 'penagihan', selectedPenagihan.id), penagihanData);
+                await updateDoc(doc(db, 'penagihan', selectedPenagihan.id), {
+                    ...penagihanData,
+                    updatedAt: now,
+                });
                 message.success('Penagihan berhasil diperbarui');
             } else {
                 const docRef = await addDoc(collection(db, 'penagihan'), penagihanData);
@@ -91,6 +97,7 @@ const PenagihanPage: React.FC = () => {
                 handlePrintPDF({ ...penagihanData, id: docRef.id } as Penagihan);
             }
             setModalVisible(false);
+            setDetailsVisible(false);
             fetchPenagihan();
         } catch (error) {
             console.error('Error saving penagihan:', error);
@@ -213,8 +220,21 @@ const PenagihanPage: React.FC = () => {
         setLoading(false);
     };
 
+    const handleRowClick = (record: Penagihan) => {
+        setSelectedForDetails(record);
+        setDetailsVisible(true);
+    };
+
     return (
         <div style={{ padding: '24px' }}>
+            <style>
+                {`
+                    .ant-table-tbody > tr:hover > td {
+                        background-color: #f5f5f5 !important;
+                    }
+                `}
+            </style>
+            
             <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2>Data Penagihan</h2>
                 <Space>
@@ -243,18 +263,18 @@ const PenagihanPage: React.FC = () => {
                 loading={loading}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onRowClick={handleRowClick}
                 onPrint={(record) => (
-                    <Button onClick={(e) => {
-                        e.stopPropagation();
-                        // Your print logic here
-                    }}>
+                    <Button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
+                    >
                         <PDFDownloadLink
                             document={<PenagihanPDF data={record} />}
-                            fileName={`penagihan-${record.id}.pdf`}
+                            fileName={`${record.nama_penagihan || 'penagihan'}-${record.nama_siswa || ''}.pdf`}
                         >
-                            {({ loading }) => (
-                                loading ? 'Loading...' : 'Print PDF'
-                            )}
+                            Download PDF
                         </PDFDownloadLink>
                     </Button>
                 )}
@@ -289,6 +309,21 @@ const PenagihanPage: React.FC = () => {
                     kelasList={kelasList}
                 />
             </Modal>
+
+            {selectedForDetails && (
+                <PenagihanDetails
+                    data={selectedForDetails}
+                    visible={detailsVisible}
+                    onClose={() => {
+                        setDetailsVisible(false);
+                        setSelectedForDetails(undefined);
+                    }}
+                    onEdit={(record) => {
+                        setSelectedPenagihan(record);
+                        handleSubmit(record);
+                    }}
+                />
+            )}
         </div>
     );
 };
