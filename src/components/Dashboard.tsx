@@ -7,7 +7,8 @@ import {
     BookOutlined,
     DollarOutlined,
     FileOutlined,
-    LogoutOutlined
+    LogoutOutlined,
+    SettingOutlined
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -36,6 +37,11 @@ const Dashboard: React.FC = () => {
             key: 'penagihan',
             icon: <FileOutlined />,
             label: <Link to="penagihan">Penagihan</Link>
+        },
+        {
+            key: 'settings',
+            icon: <SettingOutlined />,
+            label: <Link to="settings">Pengaturan</Link>
         }
     ];
 

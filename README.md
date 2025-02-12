@@ -1,70 +1,147 @@
-# Getting Started with Create React App
+# SPP Sekolah Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplikasi manajemen SPP Sekolah berbasis web menggunakan React, TypeScript, dan Firebase.
 
-## Available Scripts
+## Persiapan Awal
 
-In the project directory, you can run:
+### 1. Konfigurasi Firebase
 
-### `npm start`
+1. Buat project baru di [Firebase Console](https://console.firebase.google.com/)
+2. Aktifkan Authentication dengan Email/Password
+3. Aktifkan Firestore Database
+4. Salin kredensial Firebase dari Project Settings
+5. Buat file `.env` di root folder dan isi dengan kredensial Firebase anda sendiri :
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 2. Struktur Database Firestore
 
-### `npm test`
+Buat collections berikut di Firestore:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Collection: `settings`
+   - Document ID: `school`
+     ```json
+     {
+       "nama": "Nama Sekolah",
+       "alamat": "Alamat Sekolah",
+       "telepon": "Nomor Telepon",
+       "email": "email@sekolah.com"
+     }
+     ```
+   - Document ID: `firebase`
+     ```json
+     {
+       "apiKey": "firebase_api_key",
+       "authDomain": "firebase_auth_domain",
+       "projectId": "firebase_project_id",
+       "storageBucket": "firebase_storage_bucket",
+       "messagingSenderId": "firebase_messaging_sender_id",
+       "appId": "firebase_app_id"
+     }
+     ```
 
-### `npm run build`
+2. Collection: `kelas`
+   ```json
+   {
+     "namaKelas": "Nama Kelas",
+     "waliKelas": "Nama Wali Kelas",
+     "tingkat": "Tingkat/Level",
+     "tahunAjaran": "2023/2024"
+   }
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. Collection: `siswa`
+   ```json
+   {
+     "nama": "Nama Siswa",
+     "nis": "Nomor Induk Siswa",
+     "kelasId": "ID Kelas",
+     "namaKelas": "Nama Kelas",
+     "alamat": "Alamat Siswa",
+     "telepon": "Nomor Telepon"
+   }
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. Collection: `penagihan`
+   ```json
+   {
+     "siswaId": "ID Siswa",
+     "nama_siswa": "Nama Siswa",
+     "kelasId": "ID Kelas",
+     "nama_kelas": "Nama Kelas",
+     "tanggal_tagihan": "Timestamp",
+     "jumlah_tagihan": 0,
+     "status": "belum_lunas",
+     "keterangan": "Keterangan Tagihan"
+   }
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+5. Collection: `pembayaran`
+   ```json
+   {
+     "siswaId": "ID Siswa",
+     "nama_siswa": "Nama Siswa",
+     "kelasId": "ID Kelas",
+     "nama_kelas": "Nama Kelas",
+     "tanggal_pembayaran": "Timestamp",
+     "jumlah_pembayaran": 0,
+     "keterangan": "Keterangan Pembayaran"
+   }
+   ```
 
-### `npm run eject`
+## Menjalankan Aplikasi
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Install dependencies:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm install
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+2. Jalankan aplikasi:
+```bash
+npm run dev
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Cara Penggunaan Aplikasi
 
-## Learn More
+### 1. Login
+- Gunakan email dan password yang telah didaftarkan di Firebase Authentication
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 2. Pengaturan Awal
+- Buka menu "Pengaturan"
+- Isi informasi sekolah (nama, alamat, dll)
+- Upload logo sekolah jika diperlukan
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 3. Manajemen Kelas
+- Buka menu "Kelas"
+- Tambah/edit/hapus data kelas
+- Isi informasi wali kelas dan tahun ajaran
 
-### Code Splitting
+### 4. Manajemen Siswa
+- Buka menu "Siswa"
+- Tambah/edit/hapus data siswa
+- Pilih kelas untuk setiap siswa
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 5. Penagihan Pembayaran
+- Buka menu "Penagihan"
+- Buat penagihan individual atau massal
+- Generate dan download PDF penagihan
 
-### Analyzing the Bundle Size
+### 6. Pembayaran
+- Buka menu "Pembayaran"
+- Catat pembayaran siswa
+- Lihat history pembayaran
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Fitur Utama
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. Manajemen Data Kelas
+2. Manajemen Data Siswa
+3. Penagihan Pembayaran
+4. Cetak PDF Penagihan
+5. Pencatatan Pembayaran
+6. Pengaturan Informasi Sekolah

@@ -43,12 +43,12 @@ function App(): JSX.Element {
               <Route path="siswa" element={<SiswaPage />} />
               <Route path="pembayaran" element={<PembayaranPage />} />
               <Route path="penagihan" element={<PenagihanPage />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route
               path="/"
               element={<Navigate to="/dashboard" replace />}
             />
-            <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
       </Router>

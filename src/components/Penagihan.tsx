@@ -107,7 +107,7 @@ const PenagihanPage: React.FC = () => {
         return (
             <PDFDownloadLink
                 document={<PenagihanPDF data={data} />}
-                fileName={`penagihan-${data.id}.pdf`}
+                fileName={`${data.nama_penagihan || 'penagihan'}-${data.nama_siswa || ''}.pdf`}
                 className="ant-btn ant-btn-default"
             >
                 Download PDF
@@ -247,7 +247,7 @@ const PenagihanPage: React.FC = () => {
                     <Button>
                         <PDFDownloadLink
                             document={<PenagihanPDF data={record} />}
-                            fileName={`penagihan-${record.id}.pdf`}
+                            fileName={`${record.nama_penagihan || 'penagihan'}-${record.nama_siswa || ''}.pdf`}
                         >
                             Download PDF
                         </PDFDownloadLink>
