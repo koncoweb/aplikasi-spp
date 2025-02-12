@@ -1,0 +1,14 @@
+.kelas-container {
+    padding: 20px;
+}
+
+.kelas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.kelas-header h2 {
+    margin: 0;
+}
