@@ -65,8 +65,8 @@ const PenagihanPage: React.FC = () => {
 
             const penagihanData = {
                 ...values,
-                tanggal_tagihan: values.tanggal_tagihan ? new Date(values.tanggal_tagihan) : now,
-                tanggal_bayar: values.tanggal_bayar ? new Date(values.tanggal_bayar) : null,
+                tanggal_tagihan: values.tanggal_tagihan || now,
+                tanggal_bayar: values.tanggal_bayar || null,
                 status: 'belum_bayar',
                 createdAt: now,
                 updatedAt: now,
