@@ -91,7 +91,30 @@ const styles = StyleSheet.create({
     },
     amountText: {
         fontWeight: 'bold',
-    }
+    },
+    statusContainer: {
+        marginTop: 10,
+        marginBottom: 10,
+        padding: 5,
+        borderRadius: 3,
+    },
+    statusBelumBayar: {
+        backgroundColor: '#ffcdd2',
+        color: '#c62828',
+    },
+    statusSudahBayar: {
+        backgroundColor: '#c8e6c9',
+        color: '#2e7d32',
+    },
+    statusTelat: {
+        backgroundColor: '#ffe0b2',
+        color: '#ef6c00',
+    },
+    statusText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
 });
 
 const formatCurrency = (value: number): string => {
@@ -119,6 +142,28 @@ const PenagihanPDF: React.FC<{ data: Penagihan }> = ({ data }) => {
         fetchSchoolSettings();
     }, []);
 
+    const getStatusStyle = (status: string) => {
+        switch (status) {
+            case 'sudah_bayar':
+                return styles.statusSudahBayar;
+            case 'telat':
+                return styles.statusTelat;
+            default:
+                return styles.statusBelumBayar;
+        }
+    };
+
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case 'sudah_bayar':
+                return 'LUNAS';
+            case 'telat':
+                return 'TERLAMBAT';
+            default:
+                return 'BELUM LUNAS';
+        }
+    };
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
@@ -135,6 +180,12 @@ const PenagihanPDF: React.FC<{ data: Penagihan }> = ({ data }) => {
                 </View>
 
                 <Text style={styles.title}>BUKTI PENAGIHAN PEMBAYARAN</Text>
+
+                <View style={[styles.statusContainer, getStatusStyle(data.status)]}>
+                    <Text style={styles.statusText}>
+                        {getStatusText(data.status)}
+                    </Text>
+                </View>
 
                 <View style={styles.section}>
                     <View style={styles.row}>
