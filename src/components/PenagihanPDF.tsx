@@ -5,6 +5,13 @@ import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import logo from '../assets/logo.png';
 
+interface SchoolSettings {
+    nama: string;
+    alamat: string;
+    telepon: string;
+    email: string;
+}
+
 const styles = StyleSheet.create({
     page: {
         padding: 30,
@@ -104,9 +111,9 @@ const PenagihanPDF: React.FC<{ data: Penagihan }> = ({ data }) => {
 
     useEffect(() => {
         const fetchSchoolSettings = async () => {
-            const doc = await getDoc(doc(db, 'settings', 'school'));
-            if (doc.exists()) {
-                setSchoolSettings(doc.data() as SchoolSettings);
+            const docRef = await getDoc(doc(db, 'settings', 'school'));
+            if (docRef.exists()) {
+                setSchoolSettings(docRef.data() as SchoolSettings);
             }
         };
         fetchSchoolSettings();
