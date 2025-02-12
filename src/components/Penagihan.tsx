@@ -244,12 +244,17 @@ const PenagihanPage: React.FC = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onPrint={(record) => (
-                    <Button>
+                    <Button onClick={(e) => {
+                        e.stopPropagation();
+                        // Your print logic here
+                    }}>
                         <PDFDownloadLink
                             document={<PenagihanPDF data={record} />}
-                            fileName={`${record.nama_penagihan || 'penagihan'}-${record.nama_siswa || ''}.pdf`}
+                            fileName={`penagihan-${record.id}.pdf`}
                         >
-                            Download PDF
+                            {({ loading }) => (
+                                loading ? 'Loading...' : 'Print PDF'
+                            )}
                         </PDFDownloadLink>
                     </Button>
                 )}
