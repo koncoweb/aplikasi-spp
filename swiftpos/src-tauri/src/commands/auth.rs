@@ -2,9 +2,40 @@ use serde::{Deserialize, Serialize};
 use jsonwebtoken::{encode, Header, EncodingKey, decode, DecodingKey, Validation};
 use chrono::{Utc, Duration};
 use crate::db::{self, DbError};
+use crate::middleware;
 use tauri::State;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProvisionUserRequest {
+    pub email: String,           // Stack Auth email
+    pub full_name: String,
+    pub role: String,            // super_admin, owner, manager, cashier
+    pub tenant_id: Option<String>,
+    pub branch_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProvisionUserResponse {
+    pub success: bool,
+    pub user: Option<UserResponse>,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NeonAuthLoginRequest {
+    pub token: String,  // Stack Auth token from frontend
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NeonAuthLoginResponse {
+    pub success: bool,
+    pub user: Option<UserResponse>,
+    pub tenant: Option<TenantResponse>,
+    pub permissions: Vec<String>,
+    pub message: Option<String>,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginRequest {
@@ -174,6 +205,132 @@ pub async fn login(
 pub async fn logout() -> Result<(), String> {
     tracing::info!("User logged out");
     Ok(())
+}
+
+/// Neon Auth login - integrates Stack Auth with local SwiftPOS users
+#[tauri::command]
+pub async fn neon_auth_login(
+    request: NeonAuthLoginRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<NeonAuthLoginResponse, String> {
+    tracing::info!("Neon Auth login attempt");
+    
+    // Get app state
+    let app_state = state.read().await;
+    let neon_project_id = app_state.neon_project_id.clone();
+    let stack_secret_key = app_state.stack_secret_key.clone();
+    drop(app_state);
+    
+    // Verify token with Stack Auth API
+    let auth_url = format!(
+        "https://api.stack-auth.com/api/v1/projects/{}/auth/verify-token",
+        neon_project_id
+    );
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Client error: {}", e))?;
+    
+    let response = client
+        .post(&auth_url)
+        .header("Authorization", format!("Bearer {}", stack_secret_key))
+        .json(&serde_json::json!({ "token": request.token }))
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !response.status().is_success() {
+        tracing::error!("Token verification failed: {}", response.status());
+        return Ok(NeonAuthLoginResponse {
+            success: false,
+            user: None,
+            tenant: None,
+            permissions: vec![],
+            message: Some("Invalid token".to_string()),
+        });
+    }
+
+    let session: NeonAuthSession = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    let neon_user = session.user;
+    tracing::info!("Neon Auth user verified: {}", neon_user.email);
+
+    // Try to find local user by email
+    let local_user = match db::User::find_by_email(&neon_user.email).await {
+        Ok(user) => {
+            // Update last login
+            user.update_last_login().await.ok();
+            user
+        }
+        Err(_) => {
+            // User doesn't exist in SwiftPOS
+            tracing::warn!("Neon Auth user {} not found in SwiftPOS", neon_user.email);
+            return Ok(NeonAuthLoginResponse {
+                success: false,
+                user: None,
+                tenant: None,
+                permissions: vec![],
+                message: Some(
+                    format!(
+                        "User {} is not provisioned in SwiftPOS. Please contact administrator.",
+                        neon_user.email
+                    )
+                ),
+            });
+        }
+    };
+
+    // Check if user is active
+    if !local_user.is_active {
+        tracing::error!("User account is inactive: {}", neon_user.email);
+        return Ok(NeonAuthLoginResponse {
+            success: false,
+            user: None,
+            tenant: None,
+            permissions: vec![],
+            message: Some("Account is inactive".to_string()),
+        });
+    }
+
+    // Get tenant info if available
+    let tenant = if let Some(tenant_id) = local_user.tenant_id {
+        match db::Tenant::find_by_id(tenant_id).await {
+            Ok(t) => Some(TenantResponse {
+                id: t.id.to_string(),
+                name: t.name.clone(),
+                slug: t.slug.clone(),
+                application_name: t.application_name,
+                currency_symbol: t.currency_symbol,
+            }),
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    // Get role permissions
+    let permissions = crate::middleware::get_role_permissions(&local_user.role);
+
+    tracing::info!("Login successful for user: {} with role: {}", neon_user.email, local_user.role);
+
+    Ok(NeonAuthLoginResponse {
+        success: true,
+        user: Some(UserResponse {
+            id: local_user.id.to_string(),
+            email: local_user.email.clone(),
+            full_name: local_user.full_name.clone(),
+            role: local_user.role.clone(),
+            tenant_id: local_user.tenant_id.map(|id| id.to_string()),
+            branch_id: local_user.branch_id.map(|id| id.to_string()),
+        }),
+        tenant,
+        permissions,
+        message: None,
+    })
 }
 
 #[tauri::command]
@@ -362,4 +519,138 @@ pub async fn verify_neon_token(
         }
         Err(e) => Err(format!("Network error: {}", e)),
     }
+}
+
+// Provision a new user in SwiftPOS (links to Stack Auth account)
+// Only super_admin users can provision new users
+#[tauri::command]
+pub async fn provision_user(
+    request: ProvisionUserRequest,
+    token: String,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<ProvisionUserResponse, String> {
+    tracing::info!("Provisioning user: {}", request.email);
+    
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&token, &app_state).await?;
+    
+    // Check permission - only super_admin can provision users
+    middleware::require_role(&auth_context, "super_admin")?;
+    
+    // Validate role - prevent creating super_admin by non-super_admin
+    if request.role == "super_admin" && auth_context.role != "super_admin" {
+        return Ok(ProvisionUserResponse {
+            success: false,
+            user: None,
+            message: "Cannot create super_admin users".to_string(),
+        });
+    }
+    
+    // Non-super_admin can only create users within their tenant
+    if auth_context.role != "super_admin" {
+        if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+            if let Some(ref request_tenant_id) = request.tenant_id {
+                if auth_tenant_id != request_tenant_id {
+                    return Ok(ProvisionUserResponse {
+                        success: false,
+                        user: None,
+                        message: "Cannot provision users for different tenant".to_string(),
+                    });
+                }
+            }
+        }
+    }
+    drop(app_state);
+    
+    // Validate tenant_id if provided
+    let tenant_uuid = if let Some(ref tid) = request.tenant_id {
+        match uuid::Uuid::parse_str(tid) {
+            Ok(uuid) => Some(uuid),
+            Err(_) => return Ok(ProvisionUserResponse {
+                success: false,
+                user: None,
+                message: "Invalid tenant_id format".to_string(),
+            }),
+        }
+    } else {
+        None
+    };
+    
+    // Validate branch_id if provided
+    let branch_uuid = if let Some(ref bid) = request.branch_id {
+        match uuid::Uuid::parse_str(bid) {
+            Ok(uuid) => Some(uuid),
+            Err(_) => return Ok(ProvisionUserResponse {
+                success: false,
+                user: None,
+                message: "Invalid branch_id format".to_string(),
+            }),
+        }
+    } else {
+        None
+    };
+    
+    // Check if user already exists
+    if db::User::find_by_email(&request.email).await.is_ok() {
+        return Ok(ProvisionUserResponse {
+            success: false,
+            user: None,
+            message: format!("User {} already exists", request.email),
+        });
+    }
+    
+    // Get database pool
+    let pool = db::get_db_pool().await
+        .map_err(|e| format!("Database error: {}", e))?;
+    
+    // Create user with a placeholder hash (auth is via Stack Auth)
+    // Use a cryptographically invalid hash that can never authenticate
+    let password_placeholder = "$argon2id$v=19$m=65536,t=3,p=4$NO_PASSWORD_HASH_FOR_STACK_AUTH_USER";
+    let user_row = sqlx::query_as::<_, UserRow>(
+        "INSERT INTO users (tenant_id, branch_id, email, password_hash, full_name, role, is_active) 
+         VALUES ($1, $2, $3, $4, $5, $6, true) 
+         RETURNING id, tenant_id, branch_id, email, full_name, role, is_active, last_login, created_at, updated_at"
+    )
+    .bind(tenant_uuid)
+    .bind(branch_uuid)
+    .bind(&request.email)
+    .bind(password_placeholder)  // Empty password - auth is via Stack Auth
+    .bind(&request.full_name)
+    .bind(&request.role)
+    .fetch_one(&*pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create user: {}", e);
+        format!("Failed to create user: {}", e)
+    })?;
+    
+    let user = db::User {
+        id: user_row.id,
+        tenant_id: user_row.tenant_id,
+        branch_id: user_row.branch_id,
+        email: user_row.email,
+        password_hash: user_row.password_hash,
+        full_name: user_row.full_name,
+        role: user_row.role,
+        is_active: user_row.is_active,
+        last_login: user_row.last_login,
+        created_at: user_row.created_at,
+        updated_at: user_row.updated_at,
+    };
+    
+    tracing::info!("User provisioned successfully: {}", request.email);
+    
+    Ok(ProvisionUserResponse {
+        success: true,
+        user: Some(UserResponse {
+            id: user.id.to_string(),
+            email: user.email,
+            full_name: user.full_name,
+            role: user.role,
+            tenant_id: user.tenant_id.map(|id| id.to_string()),
+            branch_id: user.branch_id.map(|id| id.to_string()),
+        }),
+        message: "User provisioned successfully".to_string(),
+    })
 }

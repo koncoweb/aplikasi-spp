@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use crate::db;
+use crate::middleware;
+use tauri::State;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::commands::auth::AppState;
 use chrono::{Utc, Datelike};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +43,7 @@ pub struct TransactionItemResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateTransactionRequest {
+    pub token: String,
     pub tenant_id: String,
     pub branch_id: String,
     pub user_id: String,
@@ -65,14 +71,48 @@ pub struct CreateTransactionItemRequest {
     pub subtotal: f64,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GetTransactionsRequest {
+    pub token: String,
+    pub tenant_id: String,
+    pub branch_id: Option<String>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VoidTransactionRequest {
+    pub token: String,
+    pub transaction_id: String,
+    pub reason: String,
+}
+
 fn generate_transaction_number() -> String {
     let now = Utc::now();
     format!("TRX{}{:02}{:02}{:06}", now.year(), now.month(), now.day(), rand::random::<u32>() % 1000000)
 }
 
 #[tauri::command]
-pub async fn create_transaction(request: CreateTransactionRequest) -> Result<TransactionResponse, String> {
+pub async fn create_transaction(
+    request: CreateTransactionRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<TransactionResponse, String> {
     tracing::info!("Creating transaction for tenant: {}", request.tenant_id);
+    
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "transactions:write")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
     
     let tenant_uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
@@ -194,14 +234,27 @@ pub async fn create_transaction(request: CreateTransactionRequest) -> Result<Tra
 
 #[tauri::command]
 pub async fn get_transactions(
-    tenant_id: String,
-    _branch_id: Option<String>,
-    _start_date: Option<String>,
-    _end_date: Option<String>,
+    request: GetTransactionsRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
 ) -> Result<Vec<TransactionResponse>, String> {
-    tracing::info!("Getting transactions for tenant: {}", tenant_id);
+    tracing::info!("Getting transactions for tenant: {}", request.tenant_id);
     
-    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id)
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "transactions:read")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
+    
+    let tenant_uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
     
     let pool = db::get_db_pool().await
@@ -240,10 +293,21 @@ pub async fn get_transactions(
 }
 
 #[tauri::command]
-pub async fn void_transaction(transaction_id: String, reason: String) -> Result<TransactionResponse, String> {
-    tracing::info!("Voiding transaction: {}", transaction_id);
+pub async fn void_transaction(
+    request: VoidTransactionRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<TransactionResponse, String> {
+    tracing::info!("Voiding transaction: {}", request.transaction_id);
     
-    let uuid = uuid::Uuid::parse_str(&transaction_id)
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission - need transactions:void permission
+    middleware::require_permission(&auth_context, "transactions:void")?;
+    
+    let uuid = uuid::Uuid::parse_str(&request.transaction_id)
         .map_err(|e| format!("Invalid transaction ID: {}", e))?;
     
     let pool = db::get_db_pool().await
@@ -258,7 +322,7 @@ pub async fn void_transaction(transaction_id: String, reason: String) -> Result<
          amount_paid, change_amount, status, notes, created_at"
     )
     .bind(uuid)
-    .bind(&reason)
+    .bind(&request.reason)
     .fetch_one(&*pool)
     .await
     .map_err(|e| format!("Failed to void transaction: {}", e))?;

@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use crate::db;
+use crate::middleware;
+use tauri::State;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::commands::auth::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TenantResponse {
@@ -17,6 +22,17 @@ pub struct TenantResponse {
     pub currency_symbol: String,
     pub is_active: bool,
     pub created_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetTenantRequest {
+    pub token: String,
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetTenantsRequest {
+    pub token: String,
 }
 
 impl From<db::Tenant> for TenantResponse {
@@ -41,19 +57,51 @@ impl From<db::Tenant> for TenantResponse {
 }
 
 #[tauri::command]
-pub async fn get_tenants() -> Result<Vec<TenantResponse>, String> {
+pub async fn get_tenants(
+    request: GetTenantsRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<Vec<TenantResponse>, String> {
     tracing::info!("Getting all tenants");
     
-    // Only super admin can see all tenants
-    // For demo, return empty list
-    Ok(vec![])
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission - only super_admin can see all tenants
+    middleware::require_role(&auth_context, "super_admin")?;
+    
+    // Return all tenants - filtered by super_admin access
+    let tenants = db::Tenant::find_all()
+        .await
+        .map_err(|e| format!("Failed to get tenants: {}", e))?;
+    
+    Ok(tenants.into_iter().map(|t| t.into()).collect())
 }
 
 #[tauri::command]
-pub async fn get_tenant(id: String) -> Result<TenantResponse, String> {
-    tracing::info!("Getting tenant: {}", id);
+pub async fn get_tenant(
+    request: GetTenantRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<TenantResponse, String> {
+    tracing::info!("Getting tenant: {}", request.id);
     
-    let uuid = uuid::Uuid::parse_str(&id)
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "tenants:read")?;
+    
+    // Verify tenant access - users can only view their own tenant unless super_admin
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.id && auth_context.role != "super_admin" {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
+    
+    let uuid = uuid::Uuid::parse_str(&request.id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
     
     let tenant = db::Tenant::find_by_id(uuid)

@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use crate::db;
+use crate::middleware;
+use tauri::State;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::commands::auth::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CategoryResponse {
@@ -29,7 +34,14 @@ impl From<db::Category> for CategoryResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct GetCategoriesRequest {
+    pub token: String,
+    pub tenant_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateCategoryRequest {
+    pub token: String,
     pub tenant_id: String,
     pub name: String,
     pub description: Option<String>,
@@ -38,10 +50,28 @@ pub struct CreateCategoryRequest {
 }
 
 #[tauri::command]
-pub async fn get_categories(tenant_id: String) -> Result<Vec<CategoryResponse>, String> {
-    tracing::info!("Getting categories for tenant: {}", tenant_id);
+pub async fn get_categories(
+    request: GetCategoriesRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<Vec<CategoryResponse>, String> {
+    tracing::info!("Getting categories for tenant: {}", request.tenant_id);
     
-    let uuid = uuid::Uuid::parse_str(&tenant_id)
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "categories:read")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
+    
+    let uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
     
     let categories = db::Category::find_by_tenant(uuid)
@@ -52,8 +82,26 @@ pub async fn get_categories(tenant_id: String) -> Result<Vec<CategoryResponse>, 
 }
 
 #[tauri::command]
-pub async fn create_category(request: CreateCategoryRequest) -> Result<CategoryResponse, String> {
+pub async fn create_category(
+    request: CreateCategoryRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<CategoryResponse, String> {
     tracing::info!("Creating category: {} for tenant: {}", request.name, request.tenant_id);
+    
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "categories:write")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
     
     let tenant_uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;

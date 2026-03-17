@@ -9,6 +9,7 @@ pub mod db;
 pub mod commands;
 pub mod models;
 pub mod utils;
+pub mod middleware;
 
 // Application state - shared with auth commands
 pub struct AppState {
@@ -67,6 +68,18 @@ fn get_app_info() -> serde_json::Value {
         "name": "SwiftPOS",
         "version": "1.0.0",
         "description": "Desktop Point of Sale Application"
+    })
+}
+
+/// Get auth configuration for frontend (project ID and publishable key only)
+#[tauri::command]
+fn get_auth_config() -> serde_json::Value {
+    let neon_project_id = std::env::var("NEON_AUTH_PROJECT_ID").unwrap_or_default();
+    let publishable_key = std::env::var("NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY").unwrap_or_default();
+    
+    serde_json::json!({
+        "projectId": neon_project_id,
+        "publishableClientKey": publishable_key
     })
 }
 
@@ -151,10 +164,13 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet, 
             get_app_info,
+            get_auth_config,
             commands::auth::login,
             commands::auth::logout,
             commands::auth::register_tenant,
             commands::auth::verify_neon_token,
+            commands::auth::neon_auth_login,
+            commands::auth::provision_user,
             commands::tenants::get_tenants,
             commands::tenants::get_tenant,
             commands::branches::get_branches,

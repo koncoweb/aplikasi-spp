@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use crate::db;
+use crate::middleware;
+use tauri::State;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::commands::auth::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProductResponse {
@@ -41,7 +46,14 @@ impl From<db::Product> for ProductResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct GetProductsRequest {
+    pub token: String,
+    pub tenant_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateProductRequest {
+    pub token: String,
     pub tenant_id: String,
     pub category_id: Option<String>,
     pub sku: String,
@@ -53,10 +65,28 @@ pub struct CreateProductRequest {
 }
 
 #[tauri::command]
-pub async fn get_products(tenant_id: String) -> Result<Vec<ProductResponse>, String> {
-    tracing::info!("Getting products for tenant: {}", tenant_id);
+pub async fn get_products(
+    request: GetProductsRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<Vec<ProductResponse>, String> {
+    tracing::info!("Getting products for tenant: {}", request.tenant_id);
     
-    let uuid = uuid::Uuid::parse_str(&tenant_id)
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "products:read")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
+    
+    let uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
     
     let products = db::Product::find_by_tenant(uuid)
@@ -67,8 +97,26 @@ pub async fn get_products(tenant_id: String) -> Result<Vec<ProductResponse>, Str
 }
 
 #[tauri::command]
-pub async fn create_product(request: CreateProductRequest) -> Result<ProductResponse, String> {
+pub async fn create_product(
+    request: CreateProductRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<ProductResponse, String> {
     tracing::info!("Creating product: {} for tenant: {}", request.name, request.tenant_id);
+    
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "products:write")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
     
     let tenant_uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;

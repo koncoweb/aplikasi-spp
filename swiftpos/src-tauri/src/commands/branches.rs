@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use crate::db;
+use crate::middleware;
+use tauri::State;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::commands::auth::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BranchResponse {
@@ -31,7 +36,14 @@ impl From<db::Branch> for BranchResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct GetBranchesRequest {
+    pub token: String,
+    pub tenant_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateBranchRequest {
+    pub token: String,
     pub tenant_id: String,
     pub code: String,
     pub name: String,
@@ -41,10 +53,28 @@ pub struct CreateBranchRequest {
 }
 
 #[tauri::command]
-pub async fn get_branches(tenant_id: String) -> Result<Vec<BranchResponse>, String> {
-    tracing::info!("Getting branches for tenant: {}", tenant_id);
+pub async fn get_branches(
+    request: GetBranchesRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<Vec<BranchResponse>, String> {
+    tracing::info!("Getting branches for tenant: {}", request.tenant_id);
     
-    let uuid = uuid::Uuid::parse_str(&tenant_id)
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "branches:read")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
+    
+    let uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
     
     let branches = db::Branch::find_by_tenant(uuid)
@@ -55,8 +85,26 @@ pub async fn get_branches(tenant_id: String) -> Result<Vec<BranchResponse>, Stri
 }
 
 #[tauri::command]
-pub async fn create_branch(request: CreateBranchRequest) -> Result<BranchResponse, String> {
+pub async fn create_branch(
+    request: CreateBranchRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<BranchResponse, String> {
     tracing::info!("Creating branch: {} for tenant: {}", request.name, request.tenant_id);
+    
+    // Validate token and get auth context
+    let app_state = state.read().await;
+    let auth_context = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+    
+    // Check permission
+    middleware::require_permission(&auth_context, "branches:write")?;
+    
+    // Verify tenant access
+    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
+        if auth_tenant_id != &request.tenant_id {
+            return Err("Access denied to this tenant".to_string());
+        }
+    }
     
     let tenant_uuid = uuid::Uuid::parse_str(&request.tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;

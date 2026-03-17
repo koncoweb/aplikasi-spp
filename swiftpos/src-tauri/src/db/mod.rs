@@ -92,6 +92,19 @@ impl Tenant {
         Ok(row.into())
     }
     
+    pub async fn find_all() -> DbResult<Vec<Self>> {
+        let pool = get_db_pool().await?;
+        let rows = sqlx::query_as::<_, TenantRow>(
+            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
+             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
+             created_at, updated_at FROM tenants ORDER BY name"
+        )
+        .fetch_all(&*pool)
+        .await
+        .map_err(DbError::Sqlx)?;
+        Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+    
     pub async fn create(name: &str, slug: &str, email: &str) -> DbResult<Self> {
         let pool = get_db_pool().await?;
         let row = sqlx::query_as::<_, TenantRow>(
