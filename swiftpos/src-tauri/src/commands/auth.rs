@@ -60,6 +60,8 @@ pub struct Claims {
 // AppState now lives in lib.rs, we reference it here
 pub struct AppState {
     pub jwt_secret: String,
+    pub neon_project_id: String,
+    pub stack_secret_key: String,
 }
 
 fn create_token(user: &db::User, jwt_secret: &str) -> Result<String, DbError> {
@@ -283,4 +285,81 @@ struct UserRow {
     last_login: Option<chrono::DateTime<chrono::Utc>>,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+// Neon Auth token verification
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NeonAuthUser {
+    pub id: String,
+    pub email: String,
+    pub name: Option<String>,
+    pub email_verified: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NeonAuthSession {
+    pub token: String,
+    pub user: NeonAuthUser,
+    pub expires_at: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerifyNeonTokenRequest {
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerifyNeonTokenResponse {
+    pub valid: bool,
+    pub user: Option<NeonAuthUser>,
+    pub error: Option<String>,
+}
+
+// Verify Neon Auth token by calling the Neon Auth API
+#[tauri::command]
+pub async fn verify_neon_token(
+    state: tauri::State<'_, crate::AppState>,
+    request: VerifyNeonTokenRequest,
+) -> Result<VerifyNeonTokenResponse, String> {
+    let neon_project_id = &state.neon_project_id;
+    let stack_secret_key = &state.stack_secret_key;
+    
+    let auth_url = format!(
+        "https://api.stack-auth.com/api/v1/projects/{}/auth/verify-token",
+        neon_project_id
+    );
+
+    let client = reqwest::Client::new();
+    
+    match client
+        .post(&auth_url)
+        .header("Authorization", format!("Bearer {}", stack_secret_key))
+        .json(&serde_json::json!({ "token": request.token }))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<NeonAuthSession>().await {
+                    Ok(session) => Ok(VerifyNeonTokenResponse {
+                        valid: true,
+                        user: Some(session.user),
+                        error: None,
+                    }),
+                    Err(e) => Ok(VerifyNeonTokenResponse {
+                        valid: false,
+                        user: None,
+                        error: Some(format!("Failed to parse session: {}", e)),
+                    }),
+                }
+            } else {
+                Ok(VerifyNeonTokenResponse {
+                    valid: false,
+                    user: None,
+                    error: Some(format!("Token verification failed: {}", response.status())),
+                })
+            }
+        }
+        Err(e) => Err(format!("Network error: {}", e)),
+    }
 }

@@ -13,6 +13,8 @@ pub mod utils;
 // Application state - shared with auth commands
 pub struct AppState {
     pub jwt_secret: String,
+    pub neon_project_id: String,
+    pub stack_secret_key: String,
 }
 
 // Initialize logging
@@ -108,9 +110,29 @@ pub fn run() {
             
             info!("Database URL loaded from environment");
             
+            // Get Neon Auth project ID from environment
+            let neon_project_id = std::env::var("NEON_AUTH_PROJECT_ID")
+                .map_err(|_| {
+                    error!("NEON_AUTH_PROJECT_ID environment variable is not set");
+                    "NEON_AUTH_PROJECT_ID must be set in environment"
+                })?;
+            
+            info!("Neon Auth project ID loaded from environment");
+            
+            // Get Stack Auth secret key from environment
+            let stack_secret_key = std::env::var("STACK_SECRET_SERVER_KEY")
+                .map_err(|_| {
+                    error!("STACK_SECRET_SERVER_KEY environment variable is not set");
+                    "STACK_SECRET_SERVER_KEY must be set in environment"
+                })?;
+            
+            info!("Stack Auth secret key loaded from environment");
+            
             // Store state - use the same AppState type as auth commands
             app.manage(Arc::new(RwLock::new(AppState {
                 jwt_secret: jwt_secret.clone(),
+                neon_project_id,
+                stack_secret_key,
             })));
             
             info!("Application state initialized");
@@ -132,6 +154,7 @@ pub fn run() {
             commands::auth::login,
             commands::auth::logout,
             commands::auth::register_tenant,
+            commands::auth::verify_neon_token,
             commands::tenants::get_tenants,
             commands::tenants::get_tenant,
             commands::branches::get_branches,

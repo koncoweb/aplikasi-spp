@@ -20,7 +20,8 @@ Thumbs.db
 *.log
 logs/
 
-# Environment files (keep .env.example instead)
+# Environment files
+.env
 .env.local
 .env.*.local
 
