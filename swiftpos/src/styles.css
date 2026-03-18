@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .logo.vanilla:hover {
   filter: drop-shadow(0 0 2em #ffe21c);
 }

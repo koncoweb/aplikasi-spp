@@ -4,6 +4,7 @@ use tracing::{info, error, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tauri::Manager;
+use dotenv::dotenv;
 
 pub mod db;
 pub mod commands;
@@ -85,6 +86,33 @@ fn get_auth_config() -> serde_json::Value {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load environment variables from .env file if present
+    // Try multiple locations to support development and production
+    let mut env_paths = vec![
+        std::path::PathBuf::from(".env"),
+        std::path::PathBuf::from("../.env"),
+        std::path::PathBuf::from("resources/.env"),
+    ];
+    
+    // Also try to find .env in the executable's directory
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            env_paths.insert(0, exe_dir.join(".env"));
+        }
+    }
+    
+    for env_path in &env_paths {
+        if env_path.exists() {
+            if dotenv::from_path(env_path).is_ok() {
+                info!("Loaded environment variables from: {:?}", env_path);
+                break;
+            }
+        }
+    }
+    
+    // Also try default location
+    dotenv().ok();
+    
     // Initialize logging first
     init_logging();
     

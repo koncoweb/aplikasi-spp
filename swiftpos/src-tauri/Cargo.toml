@@ -52,6 +52,9 @@ base64 = "0.22"
 # Directory paths
 dirs = "5"
 
+# Environment variables
+dotenv = "0.15"
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
