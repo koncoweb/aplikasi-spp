@@ -13,9 +13,9 @@ const DEFAULT_AUTH_CONFIG = {
 // Get config from window.ENV (set by backend) or use defaults
 const getAuthConfig = async () => {
   // If window.ENV is set by Tauri, use it
-  if (window.ENV?.NEON_AUTH_PROJECT_ID) {
+  if (window.ENV?.NEXT_PUBLIC_STACK_PROJECT_ID) {
     return {
-      projectId: window.ENV.NEON_AUTH_PROJECT_ID,
+      projectId: window.ENV.NEXT_PUBLIC_STACK_PROJECT_ID,
       publishableClientKey: window.ENV.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY
     };
   }

@@ -74,11 +74,11 @@ fn get_app_info() -> serde_json::Value {
 /// Get auth configuration for frontend (project ID and publishable key only)
 #[tauri::command]
 fn get_auth_config() -> serde_json::Value {
-    let neon_project_id = std::env::var("NEON_AUTH_PROJECT_ID").unwrap_or_default();
+    let stack_project_id = std::env::var("NEXT_PUBLIC_STACK_PROJECT_ID").unwrap_or_default();
     let publishable_key = std::env::var("NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY").unwrap_or_default();
     
     serde_json::json!({
-        "projectId": neon_project_id,
+        "projectId": stack_project_id,
         "publishableClientKey": publishable_key
     })
 }
@@ -124,10 +124,10 @@ pub fn run() {
             info!("Database URL loaded from environment");
             
             // Get Neon Auth project ID from environment
-            let neon_project_id = std::env::var("NEON_AUTH_PROJECT_ID")
+            let neon_project_id = std::env::var("NEXT_PUBLIC_STACK_PROJECT_ID")
                 .map_err(|_| {
-                    error!("NEON_AUTH_PROJECT_ID environment variable is not set");
-                    "NEON_AUTH_PROJECT_ID must be set in environment"
+                    error!("NEXT_PUBLIC_STACK_PROJECT_ID environment variable is not set");
+                    "NEXT_PUBLIC_STACK_PROJECT_ID must be set in environment"
                 })?;
             
             info!("Neon Auth project ID loaded from environment");
