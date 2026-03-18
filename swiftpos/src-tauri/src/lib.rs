@@ -101,17 +101,22 @@ pub fn run() {
         }
     }
     
+    // Try to load .env from multiple locations
+    let mut loaded = false;
     for env_path in &env_paths {
         if env_path.exists() {
             if dotenv::from_path(env_path).is_ok() {
                 info!("Loaded environment variables from: {:?}", env_path);
+                loaded = true;
                 break;
             }
         }
     }
     
-    // Also try default location
-    dotenv().ok();
+    // Fallback to default location if no custom path worked
+    if !loaded {
+        dotenv().ok();
+    }
     
     // Initialize logging first
     init_logging();

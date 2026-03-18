@@ -1,7 +1,7 @@
 {
   "productName": "SwiftPOS",
-  "version": "1.0.0",
-  "identifier": "com.swiftpos.app",
+  "version": "1.0.1",
+  "identifier": "com.swiftpos.koncoweb",
   "build": {
     "frontendDist": "../src"
   },

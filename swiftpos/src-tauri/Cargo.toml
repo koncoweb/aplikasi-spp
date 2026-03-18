@@ -1,6 +1,6 @@
 [package]
 name = "swiftpos"
-version = "1.0.0"
+version = "1.0.1"
 description = "SwiftPOS - Desktop Point of Sale Application"
 authors = ["SwiftPOS Team"]
 edition = "2021"

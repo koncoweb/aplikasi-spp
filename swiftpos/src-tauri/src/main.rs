@@ -4,3 +4,4 @@
 fn main() {
     swiftpos_lib::run()
 }
+

@@ -1,0 +1,19 @@
+
+> swiftpos@0.1.0 tauri
+> tauri build
+
+        Info Looking up installed tauri packages to check mismatched versions...
+        Warn The bundle identifier "com.swiftpos.app" set in `"tauri.conf.json" identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
+    Finished `release` profile [optimized] target(s) in 1.35s
+       Built application at: C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\swiftpos.exe
+        Info Patching C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\swiftpos.exe with bundle type information: nsis
+        Info Target: x64
+     Running makensis to produce C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\bundle\nsis\SwiftPOS_1.0.1_x64-setup.exe
+        Info Patching C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\swiftpos.exe with bundle type information: msi
+        Info Target: x64
+     Running candle for "C:\\projects\\swiftpos2026\\swiftpos\\src-tauri\\target\\release\\wix\\x64\\main.wxs"
+     Running light to produce C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\bundle\msi\SwiftPOS_1.0.1_x64_en-US.msi
+    Finished 2 bundles at:
+        C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\bundle\nsis\SwiftPOS_1.0.1_x64-setup.exe
+        C:\projects\swiftpos2026\swiftpos\src-tauri\target\release\bundle\msi\SwiftPOS_1.0.1_x64_en-US.msi
+
