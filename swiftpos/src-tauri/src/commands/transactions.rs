@@ -4,7 +4,7 @@ use crate::middleware;
 use tauri::State;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::commands::auth::AppState;
+use crate::AppState;
 use chrono::{Utc, Datelike};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,7 +74,6 @@ pub struct CreateTransactionItemRequest {
 #[derive(Debug, Deserialize)]
 pub struct GetTransactionsRequest {
     pub token: String,
-    pub tenant_id: String,
     pub branch_id: Option<String>,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
@@ -237,24 +236,16 @@ pub async fn get_transactions(
     request: GetTransactionsRequest,
     state: State<'_, Arc<RwLock<AppState>>>,
 ) -> Result<Vec<TransactionResponse>, String> {
-    tracing::info!("Getting transactions for tenant: {}", request.tenant_id);
-    
-    // Validate token and get auth context
     let app_state = state.read().await;
     let auth_context = middleware::validate_token(&request.token, &app_state).await?;
     drop(app_state);
-    
-    // Check permission
+
     middleware::require_permission(&auth_context, "transactions:read")?;
+
+    let tenant_id = auth_context.tenant_id
+        .ok_or_else(|| "Tenant ID tidak ditemukan dalam token".to_string())?;
     
-    // Verify tenant access
-    if let Some(ref auth_tenant_id) = auth_context.tenant_id {
-        if auth_tenant_id != &request.tenant_id {
-            return Err("Access denied to this tenant".to_string());
-        }
-    }
-    
-    let tenant_uuid = uuid::Uuid::parse_str(&request.tenant_id)
+    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id)
         .map_err(|e| format!("Invalid tenant ID: {}", e))?;
     
     let pool = db::get_db_pool().await

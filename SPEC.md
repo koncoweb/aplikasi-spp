@@ -1,9 +1,9 @@
 # SwiftPOS Desktop Application
 ## Software Requirements Specification (SRS)
 
-**Version:** 1.0  
-**Date:** March 17, 2026  
-**Status:** Final  
+**Version:** 1.2  
+**Date:** March 20, 2026  
+**Status:** Active Development  
 
 ---
 
@@ -68,7 +68,7 @@ SwiftPOS follows a desktop application architecture with the following component
 | Desktop Runtime | Tauri v2 | Cross-platform desktop executable |
 | Frontend | HTML + HTMX | Dynamic UI without complex JavaScript |
 | Styling | TailwindCSS | Responsive design |
-| Backend | Rust | High-performance business logic |
+| Backend | Rust | High-performance business logic (sqlx 0.8 stability) |
 | Primary Database | NeonDB (PostgreSQL) | Cloud-based data storage |
 | Local Database | SQLite | Offline backup and operations |
 | Authentication | JWT + Argon2 | Secure login |
@@ -97,6 +97,10 @@ SwiftPOS follows a desktop application architecture with the following component
 | AUTH-003 | Sessions shall be managed via JWT tokens |
 | AUTH-004 | Failed login attempts shall be tracked and account locked after 5 attempts |
 | AUTH-005 | Users shall be able to reset password via email token |
+| AUTH-006 | New tenants shall be able to self-register via a multi-step modal form (Step 1: akun admin, Step 2: info bisnis) without requiring platform admin intervention |
+| AUTH-007 | Upon successful tenant registration, the system shall automatically log in the owner user and redirect to the main dashboard |
+| AUTH-008 | Tenant slugs shall be auto-generated from the business name (lowercase alphanumeric + dash); slug collision shall be resolved by appending a UUID suffix |
+
 
 #### 3.1.2 Role-Based Access Control
 
@@ -170,10 +174,12 @@ SwiftPOS follows a desktop application architecture with the following component
 | Requirement ID | Description | Payment Methods |
 |----------------|-------------|-----------------|
 | PMT-001 | Process cash payment | Tunai |
-| PMT-002 | Process QR Code payment | QR (QRIS) |
-| PMT-003 | Process debit card | Kartu Debit |
-| PMT-004 | Process credit card | Kartu Kredit |
-| PMT-005 | Calculate change | Automatic |
+| PMT-002 | Process bank transfer payment | Transfer |
+| PMT-003 | Process QR Code payment | QR (QRIS) |
+| PMT-004 | Process credit/receivables payment | Kredit (Piutang) |
+| PMT-005 | Process debit card | Kartu Debit |
+| PMT-006 | Process credit card | Kartu Kredit |
+| PMT-007 | Calculate change | Automatic |
 
 #### 3.4.3 Transaction Operations
 
@@ -183,6 +189,25 @@ SwiftPOS follows a desktop application architecture with the following component
 | TXN-010 | Void transaction (same day, requires reason) |
 | TXN-011 | Refund transaction (requires original receipt) |
 | TXN-012 | Reprint receipt |
+
+#### 3.4.4 Kasir Operations (Non-Transaction)
+
+| Requirement ID | Description |
+|----------------|-------------|
+| KSR-001 | Buka Kasir (Start of shift initial capital input) |
+| KSR-002 | Record Kas Masuk (Incoming Cash with summary stats) |
+| KSR-003 | Record Pengeluaran (Outgoing Cash/Expenses with history) |
+| KSR-004 | Tambah Stok (Add Stock directly from Kasir) |
+| KSR-005 | Tambah Piutang Manual (Manual receivables entry form) |
+| KSR-006 | Bayar Piutang (Process Receivables Payment by customer) |
+| KSR-007 | Manajemen Piutang (Overview of active & historical receivables) |
+| KSR-008 | Tutup Kasir Dashboard (End of day cash reconciliation with full breakdown) |
+| KSR-009 | Laporan Tutup Kasir (Printable closing report with transaction history) |
+| KSR-010 | Pengaturan (Settings) - Access to basic cashier-specific settings like printer selection |
+| KSR-011 | Tambah Kas Baru - Admin level cash injection |
+| KSR-012 | DP (Uang Muka) support during Kredit payment method |
+| KSR-013 | Sisa Piutang calculation and display for Kredit transactions |
+| KSR-014 | Export closing report to PDF / Google Sheets |
 
 ### 3.5 Users Module (Admin)
 
@@ -204,7 +229,26 @@ SwiftPOS follows a desktop application architecture with the following component
 | BRANCH-004 | Set main branch | is_main_branch flag |
 | BRANCH-005 | Configure operating hours | Open/Close time |
 
-### 3.7 Reports Module
+### 3.7 Transactions Module (Admin)
+
+| Requirement ID | Description | Data Fields |
+|----------------|-------------|-------------|
+| TRX-ADM-001 | Display transaction list | ID, Date & Time, Customer, Type, Total, Payment, Status, Kasir |
+| TRX-ADM-002 | Filter transactions | Date Range, Status, Transaction Type |
+| TRX-ADM-003 | Export transactions | Export to Excel/CSV |
+| TRX-ADM-004 | View transaction details | Receipt view |
+
+### 3.8 Piutang Module (Admin)
+
+| Requirement ID | Description | Data Fields |
+|----------------|-------------|-------------|
+| PIU-001 | Display piutang list | Customer ID, Name, Total, Sisa Tagihan, Status |
+| PIU-002 | Search and filter piutang | By Customer name, Date Range, Status |
+| PIU-003 | Create new piutang | Customer, Total Piutang, Jatuh Tempo, Notes |
+| PIU-004 | Manage payments (cicilan) | Record partial or full payments |
+| PIU-005 | Edit/Delete piutang | All piutang fields |
+
+### 3.9 Reports Module
 
 | Requirement ID | Description | Output |
 |----------------|-------------|--------|
@@ -217,7 +261,7 @@ SwiftPOS follows a desktop application architecture with the following component
 | RPT-007 | Export to PDF | .pdf download |
 | RPT-008 | Date range filter | Start/End date |
 
-### 3.8 Settings Module
+### 3.10 Settings Module
 
 | Requirement ID | Description | Fields |
 |----------------|-------------|--------|
@@ -226,9 +270,9 @@ SwiftPOS follows a desktop application architecture with the following component
 | SET-003 | Receipt settings | Header, Footer, Show logo |
 | SET-004 | Tax settings | Default tax rate |
 
-### 3.9 Printer Module
+### 3.11 Printer Module
 
-#### 3.9.1 Printer Types Supported
+#### 3.11.1 Printer Types Supported
 
 | Requirement ID | Description | Printer Type |
 |----------------|-------------|--------------|
@@ -238,7 +282,7 @@ SwiftPOS follows a desktop application architecture with the following component
 | PRT-004 | Support thermal printers | Thermal |
 | PRT-005 | Support label printers | Label |
 
-#### 3.9.2 Connection Methods
+#### 3.11.2 Connection Methods
 
 | Requirement ID | Description | Connection |
 |----------------|-------------|------------|
@@ -249,7 +293,7 @@ SwiftPOS follows a desktop application architecture with the following component
 | PRT-010 | Support WiFi connection | WiFi |
 | PRT-011 | Support virtual printer (PDF) | Virtual |
 
-#### 3.9.3 Printer Management
+#### 3.11.3 Printer Management
 
 | Requirement ID | Description |
 |----------------|-------------|
@@ -259,7 +303,7 @@ SwiftPOS follows a desktop application architecture with the following component
 | PRT-015 | Set default printer |
 | PRT-016 | Configure paper size (58mm, 80mm, A4) |
 
-#### 3.9.4 Receipt Printing
+#### 3.11.4 Receipt Printing
 
 | Requirement ID | Description |
 |----------------|-------------|
@@ -319,8 +363,6 @@ SwiftPOS follows a desktop application architecture with the following component
 | `payments` | Payment records | transaction_id, method, amount |
 | `settings` | Configuration | tenant_id, branch_id, setting_key, setting_value |
 | `printers` | Printer configurations | tenant_id, branch_id, name, type, connection_type, config |
-
-### 4.3 Printer Configuration Table
 
 ### 4.3 Printer Configuration Table
 
@@ -419,13 +461,18 @@ CREATE INDEX idx_printers_connection ON printers(connection_type);
 | Dashboard | Revenue card, Transaction count, Product count |
 | Products | Table with image, name, category, price, stock, status |
 | Categories | Table with name, product count, status |
-| Users | Table with name, email, store, role, status |
+| Users | Table with name, email, role, unit, status |
 | Branches | Table with code, name, address, status |
-| Transactions | Table with number, time, customer, total, payment, status |
+| Transactions | Table with number, time, customer, type, total, payment, status, kasir |
+| Piutang | Table with customer id, name, total piutang, sisa tagihan, status. Modal forms. |
 | Reports | Date filter, Period select, Export buttons, Data table |
 | Settings | Form inputs for store info, receipt, tax |
 
-### 6.2 Kasir (Cashier) Interface
+### 6.2 UI/UX Guidelines
+- **Standardized Form Theme**: All forms (Login, Branch, Product, User, etc.) must use a **Light Theme** for maximum readability. This includes dark text on light backgrounds and light field backgrounds, ensuring accessibility across different monitor types.
+- **Contrast**: High contrast for all interactive elements, particularly in the Period Selector and Table views.
+
+### 6.3 Kasir (Cashier) Interface
 
 | Component | Description |
 |-----------|-------------|
@@ -433,8 +480,20 @@ CREATE INDEX idx_printers_connection ON printers(connection_type);
 | Product Grid | Product cards with image, name, price |
 | Category Filter | Buttons: Semua, Mie, Nasi, Minuman, Extra |
 | Transaction Panel | Customer name, Cart items, Qty, Subtotal, PPN, Total |
-| Payment Buttons | Tunai, QR, Debit, Kredit |
+| Payment Buttons | Tunai, Transfer, Kredit |
+| Payment Modal - Tunai | Amount received, Change calculation |
+| Payment Modal - Transfer | Bank name, Account info |
+| Payment Modal - Kredit | Customer info, DP (Uang Muka), Sisa Piutang |
 | Receipt | Store info, Items, Totals, Payment details |
+| Modal Buka Kasir | Shift start capital input |
+| Modal Kas Masuk | Cash inflow with summary stats (Total Kas, Penjualan, %) |
+| Modal Pengeluaran | Expense recording with history list |
+| Modal Tambah Stok | Stock addition per product from kasir |
+| Modal Bayar Piutang | Customer receivables payment (search, balance, method) |
+| Modal Manajemen Piutang | Receivables overview (active, historical, export) |
+| Modal Tambah Piutang Manual | New credit entry form (customer, date, amount, DP) |
+| Modal Tutup Kasir Dashboard | Full closing dashboard (Tunai Masuk, Pengeluaran, Kas Seharusnya, Detail transaksi & pengeluaran, Piutang lunas, Kas aktual, Selisih) |
+| Page Laporan Tutup Kasir | Printable closing report with full transaction history |
 
 ---
 
@@ -487,8 +546,17 @@ npm run tauri build -- --target x86_64-unknown-linux-gnu  # Linux
 - [ ] Products display in grid
 - [ ] Adding to cart works
 - [ ] Quantity adjustment works
-- [ ] All payment methods process correctly
+- [ ] Tunai, Transfer, Kredit payment methods process correctly
+- [ ] Kredit payment shows DP and Sisa Piutang fields
 - [ ] Receipt generates properly
+- [ ] Buka Kasir with initial capital works
+- [ ] Kas Masuk recording with summary stats works
+- [ ] Pengeluaran recording with history works
+- [ ] Manajemen Piutang overview displays correctly
+- [ ] Tambah Piutang Manual form works
+- [ ] Bayar Piutang by customer works
+- [ ] Tutup Kasir Dashboard shows full breakdown
+- [ ] Laporan Tutup Kasir printable report available
 
 ### 8.5 Reports
 - [ ] Date filter works
@@ -545,11 +613,20 @@ DATABASE_URL=postgresql://user:password@host.neon.tech/dbname?sslmode=require
 | `/api/categories` | GET, POST | Categories CRUD |
 | `/api/transactions` | GET, POST | Transactions |
 | `/api/transactions/:id/void` | POST | Void transaction |
+| `/api/kasir/buka` | POST | Open shift (set initial capital) |
+| `/api/kasir/tutup` | POST | Close shift (reconciliation) |
+| `/api/kasir/kas-masuk` | GET, POST | Kas masuk (incoming cash) |
+| `/api/kasir/pengeluaran` | GET, POST | Pengeluaran (outgoing cash) |
+| `/api/kasir/stok` | POST | Add stock from kasir |
+| `/api/piutang` | GET, POST | Piutang CRUD |
+| `/api/piutang/:id/bayar` | POST | Record piutang payment |
+| `/api/laporan/tutup-kasir` | GET | Closing report |
 | `/api/reports/sales` | GET | Sales report |
 | `/api/settings` | GET, PUT | Settings |
 
 ---
 
 **Document Prepared:** March 17, 2026  
+**Last Updated:** March 20, 2026  
 **Project:** SwiftPOS Desktop POS Application  
-**Technology:** Tauri v2 + HTMX + NeonDB + SQLite
+**Technology:** Tauri v2 + HTMX + NeonDB + SQLite (sqlx 0.8 stability)

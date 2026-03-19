@@ -1,0 +1,522 @@
+    Checking swiftpos v1.0.1 (C:\projects\swiftpos2026\swiftpos\src-tauri)
+error: error returned from database: prepared statement "sqlx_s_1" does not exist
+  --> src\commands\dashboard.rs:52:28
+   |
+52 |       let daily_sales: f64 = sqlx::query_scalar!(
+   |  ____________________________^
+53 | |         r#"SELECT COALESCE(SUM(total_amount), 0)::float8 FROM transactions 
+54 | |          WHERE tenant_id = $1 AND created_at >= CURRENT_DATE AND (status = 'completed' OR status IS NULL)"#,
+55 | |         tenant_uuid
+56 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error returned from database: prepared statement "sqlx_s_4" does not exist
+  --> src\commands\dashboard.rs:63:29
+   |
+63 |       let weekly_sales: f64 = sqlx::query_scalar!(
+   |  _____________________________^
+64 | |         r#"SELECT COALESCE(SUM(total_amount), 0)::float8 FROM transactions 
+65 | |          WHERE tenant_id = $1 AND created_at >= date_trunc('week', CURRENT_DATE) AND (status = 'completed' OR status IS NULL)"#,
+66 | |         tenant_uuid
+67 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error returned from database: prepared statement "sqlx_s_6" does not exist
+  --> src\commands\dashboard.rs:74:30
+   |
+74 |       let monthly_sales: f64 = sqlx::query_scalar!(
+   |  ______________________________^
+75 | |         r#"SELECT COALESCE(SUM(total_amount), 0)::float8 FROM transactions 
+76 | |          WHERE tenant_id = $1 AND created_at >= date_trunc('month', CURRENT_DATE) AND (status = 'completed' OR status IS NULL)"#,
+77 | |         tenant_uuid
+78 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error returned from database: prepared statement "sqlx_s_8" does not exist
+  --> src\commands\dashboard.rs:85:37
+   |
+85 |       let transactions_by_unit_rows = sqlx::query!(
+   |  _____________________________________^
+86 | |         r#"SELECT b.id as unit_id, b.name as unit_name, COUNT(t.id) as count 
+87 | |          FROM branches b
+88 | |          LEFT JOIN transactions t ON b.id = t.branch_id
+...  |
+91 | |         tenant_uuid
+92 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error returned from database: prepared statement "sqlx_s_11" does not exist
+   --> src\commands\dashboard.rs:107:31
+    |
+107 |       let total_products: i64 = sqlx::query_scalar!(
+    |  _______________________________^
+108 | |         "SELECT COUNT(*) FROM products WHERE tenant_id = $1 AND is_active = true",
+109 | |         tenant_uuid
+110 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error returned from database: prepared statement "sqlx_s_13" does not exist
+   --> src\commands\dashboard.rs:116:35
+    |
+116 |       let low_stock_products: i64 = sqlx::query_scalar!(
+    |  ___________________________________^
+117 | |         "SELECT COUNT(*) FROM products WHERE tenant_id = $1 AND is_active = true AND stock <= stock_min",
+118 | |         tenant_uuid
+119 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error returned from database: prepared statement "sqlx_s_15" does not exist
+   --> src\commands\users.rs:114:15
+    |
+114 |       let row = sqlx::query!(
+    |  _______________^
+115 | |         "INSERT INTO users (tenant_id, branch_id, email, password_hash, full_name, role, is_active)
+116 | |          VALUES ($1, $2, $3, $4, $5, $6, true)
+117 | |          RETURNING id, tenant_id, branch_id, email, full_name, role, is_active",
+...   |
+123 | |         &request.role
+124 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused import: `crate::middleware`
+ --> src\commands\auth.rs:9:5
+  |
+9 | use crate::middleware;
+  |     ^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Serialize`
+ --> src\commands\users.rs:1:26
+  |
+1 | use serde::{Deserialize, Serialize};
+  |                          ^^^^^^^^^
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+  --> src\db\mod.rs:75:16
+   |
+75 |         Ok(row.into())
+   |                ^^^^ unsatisfied trait bound
+   |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+  --> src\db\mod.rs:42:1
+   |
+42 | pub struct Tenant {
+   | ^^^^^^^^^^^^^^^^^
+   = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+  --> src\db\mod.rs:92:16
+   |
+92 |         Ok(row.into())
+   |                ^^^^ unsatisfied trait bound
+   |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+  --> src\db\mod.rs:42:1
+   |
+42 | pub struct Tenant {
+   | ^^^^^^^^^^^^^^^^^
+   = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+   --> src\db\mod.rs:105:39
+    |
+105 |         Ok(rows.into_iter().map(|r| r.into()).collect())
+    |                                       ^^^^ unsatisfied trait bound
+    |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+   --> src\db\mod.rs:42:1
+    |
+ 42 | pub struct Tenant {
+    | ^^^^^^^^^^^^^^^^^
+    = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+   --> src\db\mod.rs:123:16
+    |
+123 |         Ok(row.into())
+    |                ^^^^ unsatisfied trait bound
+    |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+   --> src\db\mod.rs:42:1
+    |
+ 42 | pub struct Tenant {
+    | ^^^^^^^^^^^^^^^^^
+    = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+   --> src\db\mod.rs:156:39
+    |
+156 |         Ok(rows.into_iter().map(|r| r.into()).collect())
+    |                                       ^^^^ unsatisfied trait bound
+    |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+   --> src\db\mod.rs:42:1
+    |
+ 42 | pub struct Tenant {
+    | ^^^^^^^^^^^^^^^^^
+    = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+   --> src\db\mod.rs:173:16
+    |
+173 |         Ok(row.into())
+    |                ^^^^ unsatisfied trait bound
+    |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+   --> src\db\mod.rs:42:1
+    |
+ 42 | pub struct Tenant {
+    | ^^^^^^^^^^^^^^^^^
+    = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+   --> src\db\mod.rs:190:16
+    |
+190 |         Ok(row.into())
+    |                ^^^^ unsatisfied trait bound
+    |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+   --> src\db\mod.rs:42:1
+    |
+ 42 | pub struct Tenant {
+    | ^^^^^^^^^^^^^^^^^
+    = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0277]: the trait bound `Tenant: From<TenantRow>` is not satisfied
+   --> src\db\mod.rs:209:16
+    |
+209 |         Ok(row.into())
+    |                ^^^^ unsatisfied trait bound
+    |
+help: the trait `From<TenantRow>` is not implemented for `Tenant`
+   --> src\db\mod.rs:42:1
+    |
+ 42 | pub struct Tenant {
+    | ^^^^^^^^^^^^^^^^^
+    = note: required for `TenantRow` to implement `Into<Tenant>`
+
+error[E0034]: multiple applicable items in scope
+   --> src\commands\auth.rs:148:23
+    |
+148 |     match db::Tenant::find_by_id(tenant_id).await {
+    |                       ^^^^^^^^^^ multiple `find_by_id` found
+    |
+note: candidate #1 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:61:5
+    |
+ 61 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:159:5
+    |
+159 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0034]: multiple applicable items in scope
+   --> src\commands\auth.rs:299:37
+    |
+299 |     let final_slug = if db::Tenant::find_by_slug(&slug).await.is_ok() {
+    |                                     ^^^^^^^^^^^^ multiple `find_by_slug` found
+    |
+note: candidate #1 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:78:5
+    |
+ 78 |     pub async fn find_by_slug(slug: &str) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:176:5
+    |
+176 |     pub async fn find_by_slug(slug: &str) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0282]: type annotations needed
+   --> src\commands\auth.rs:299:25
+    |
+299 |     let final_slug = if db::Tenant::find_by_slug(&slug).await.is_ok() {
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0034]: multiple applicable items in scope
+   --> src\commands\auth.rs:306:30
+    |
+306 |     let tenant = db::Tenant::create(
+    |                              ^^^^^^ multiple `create` found
+    |
+note: candidate #1 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:108:5
+    |
+108 |     pub async fn create(name: &str, slug: &str, email: &str, phone: Option<&str>, address: Option<&str>) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:193:5
+    |
+193 |     pub async fn create(name: &str, slug: &str, email: &str, phone: Option<&str>, address: Option<&str>) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0282]: type annotations needed
+   --> src\commands\auth.rs:306:18
+    |
+306 |       let tenant = db::Tenant::create(
+    |  __________________^
+307 | |         &request.name,
+308 | |         &final_slug,
+309 | |         &request.email,
+...   |
+313 | |         .await
+    | |______________^ cannot infer type
+
+error[E0034]: multiple applicable items in scope
+   --> src\commands\tenants.rs:83:31
+    |
+ 83 |     let tenants = db::Tenant::find_all()
+    |                               ^^^^^^^^ multiple `find_all` found
+    |
+note: candidate #1 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:95:5
+    |
+ 95 |     pub async fn find_all() -> DbResult<Vec<Self>> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:147:5
+    |
+147 |     pub async fn find_all() -> DbResult<Vec<Self>> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0282]: type annotations needed
+  --> src\commands\tenants.rs:83:19
+   |
+83 |       let tenants = db::Tenant::find_all()
+   |  ___________________^
+84 | |         .await
+   | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> src\commands\tenants.rs:87:33
+   |
+87 |     Ok(tenants.into_iter().map(|t| t.into()).collect())
+   |                                 ^  - type must be known at this point
+   |
+help: consider giving this closure parameter an explicit type
+   |
+87 |     Ok(tenants.into_iter().map(|t: /* Type */| t.into()).collect())
+   |                                  ++++++++++++
+
+error[E0034]: multiple applicable items in scope
+   --> src\commands\tenants.rs:115:30
+    |
+115 |     let tenant = db::Tenant::find_by_id(uuid)
+    |                              ^^^^^^^^^^ multiple `find_by_id` found
+    |
+note: candidate #1 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:61:5
+    |
+ 61 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:159:5
+    |
+159 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0282]: type annotations needed
+   --> src\commands\tenants.rs:115:18
+    |
+115 |       let tenant = db::Tenant::find_by_id(uuid)
+    |  __________________^
+116 | |         .await
+    | |______________^ cannot infer type
+
+error[E0034]: multiple applicable items in scope
+   --> src\commands\tenants.rs:140:34
+    |
+140 |     let mut tenant = db::Tenant::find_by_id(tenant_uuid)
+    |                                  ^^^^^^^^^^ multiple `find_by_id` found
+    |
+note: candidate #1 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:61:5
+    |
+ 61 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Tenant`
+   --> src\db\mod.rs:159:5
+    |
+159 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0282]: type annotations needed
+   --> src\commands\tenants.rs:140:22
+    |
+140 |       let mut tenant = db::Tenant::find_by_id(tenant_uuid)
+    |  ______________________^
+141 | |         .await
+    | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src\commands\tenants.rs:148:5
+    |
+148 |     tenant.update().await
+    |     ^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> src\commands\dashboard.rs:52:28
+   |
+52 |       let daily_sales: f64 = sqlx::query_scalar!(
+   |  ____________________________^
+53 | |         r#"SELECT COALESCE(SUM(total_amount), 0)::float8 FROM transactions 
+54 | |          WHERE tenant_id = $1 AND created_at >= CURRENT_DATE AND (status = 'completed' OR status IS NULL)"#,
+55 | |         tenant_uuid
+56 | |     )
+57 | |     .fetch_one(&*pool)
+58 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> src\commands\dashboard.rs:63:29
+   |
+63 |       let weekly_sales: f64 = sqlx::query_scalar!(
+   |  _____________________________^
+64 | |         r#"SELECT COALESCE(SUM(total_amount), 0)::float8 FROM transactions 
+65 | |          WHERE tenant_id = $1 AND created_at >= date_trunc('week', CURRENT_DATE) AND (status = 'completed' OR status IS NULL)"#,
+66 | |         tenant_uuid
+67 | |     )
+68 | |     .fetch_one(&*pool)
+69 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> src\commands\dashboard.rs:74:30
+   |
+74 |       let monthly_sales: f64 = sqlx::query_scalar!(
+   |  ______________________________^
+75 | |         r#"SELECT COALESCE(SUM(total_amount), 0)::float8 FROM transactions 
+76 | |          WHERE tenant_id = $1 AND created_at >= date_trunc('month', CURRENT_DATE) AND (status = 'completed' OR status IS NULL)"#,
+77 | |         tenant_uuid
+78 | |     )
+79 | |     .fetch_one(&*pool)
+80 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> src\commands\dashboard.rs:85:37
+   |
+85 |       let transactions_by_unit_rows = sqlx::query!(
+   |  _____________________________________^
+86 | |         r#"SELECT b.id as unit_id, b.name as unit_name, COUNT(t.id) as count 
+87 | |          FROM branches b
+88 | |          LEFT JOIN transactions t ON b.id = t.branch_id
+...  |
+93 | |     .fetch_all(&*pool)
+94 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src\commands\dashboard.rs:107:31
+    |
+107 |       let total_products: i64 = sqlx::query_scalar!(
+    |  _______________________________^
+108 | |         "SELECT COUNT(*) FROM products WHERE tenant_id = $1 AND is_active = true",
+109 | |         tenant_uuid
+...   |
+112 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src\commands\dashboard.rs:116:35
+    |
+116 |       let low_stock_products: i64 = sqlx::query_scalar!(
+    |  ___________________________________^
+117 | |         "SELECT COUNT(*) FROM products WHERE tenant_id = $1 AND is_active = true AND stock <= stock_min",
+118 | |         tenant_uuid
+...   |
+121 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src\commands\users.rs:114:15
+    |
+114 |       let row = sqlx::query!(
+    |  _______________^
+115 | |         "INSERT INTO users (tenant_id, branch_id, email, password_hash, full_name, role, is_active)
+116 | |          VALUES ($1, $2, $3, $4, $5, $6, true)
+117 | |          RETURNING id, tenant_id, branch_id, email, full_name, role, is_active",
+...   |
+125 | |     .fetch_one(&*pool)
+126 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src\commands\users.rs:136:39
+    |
+136 |         tenant_id: row.tenant_id.map(|id| id.to_string()),
+    |                                       ^^  -- type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+136 |         tenant_id: row.tenant_id.map(|id: /* Type */| id.to_string()),
+    |                                         ++++++++++++
+
+error[E0282]: type annotations needed
+   --> src\commands\users.rs:137:39
+    |
+137 |         branch_id: row.branch_id.map(|id| id.to_string()),
+    |                                       ^^  -- type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+137 |         branch_id: row.branch_id.map(|id: /* Type */| id.to_string()),
+    |                                         ++++++++++++
+
+error[E0592]: duplicate definitions with name `find_by_id`
+   --> src\db\mod.rs:61:5
+    |
+ 61 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `find_by_id`
+...
+159 |     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+    |     --------------------------------------------------------- other definition for `find_by_id`
+
+error[E0592]: duplicate definitions with name `find_by_slug`
+   --> src\db\mod.rs:78:5
+    |
+ 78 |     pub async fn find_by_slug(slug: &str) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `find_by_slug`
+...
+176 |     pub async fn find_by_slug(slug: &str) -> DbResult<Self> {
+    |     ------------------------------------------------------- other definition for `find_by_slug`
+
+error[E0592]: duplicate definitions with name `find_all`
+   --> src\db\mod.rs:95:5
+    |
+ 95 |     pub async fn find_all() -> DbResult<Vec<Self>> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `find_all`
+...
+147 |     pub async fn find_all() -> DbResult<Vec<Self>> {
+    |     ---------------------------------------------- other definition for `find_all`
+
+error[E0592]: duplicate definitions with name `create`
+   --> src\db\mod.rs:108:5
+    |
+108 |     pub async fn create(name: &str, slug: &str, email: &str, phone: Option<&str>, address: Option<&str>) -> DbResult<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `create`
+...
+193 |     pub async fn create(name: &str, slug: &str, email: &str, phone: Option<&str>, address: Option<&str>) -> DbResult<Self> {
+    |     ---------------------------------------------------------------------------------------------------------------------- other definition for `create`
+
+Some errors have detailed explanations: E0034, E0277, E0282, E0592.
+For more information about an error, try `rustc --explain E0034`.
+warning: `swiftpos` (lib) generated 2 warnings
+error: could not compile `swiftpos` (lib) due to 41 previous errors; 2 warnings emitted

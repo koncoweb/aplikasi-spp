@@ -12,11 +12,9 @@ pub mod models;
 pub mod utils;
 pub mod middleware;
 
-// Application state - shared with auth commands
+// Application state — email+password auth only, no external auth provider
 pub struct AppState {
     pub jwt_secret: String,
-    pub neon_project_id: String,
-    pub stack_secret_key: String,
 }
 
 // Initialize logging
@@ -72,15 +70,13 @@ fn get_app_info() -> serde_json::Value {
     })
 }
 
-/// Get auth configuration for frontend (project ID and publishable key only)
+/// Kembalikan info dasar aplikasi ke frontend
 #[tauri::command]
 fn get_auth_config() -> serde_json::Value {
-    let stack_project_id = std::env::var("NEXT_PUBLIC_STACK_PROJECT_ID").unwrap_or_default();
-    let publishable_key = std::env::var("NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY").unwrap_or_default();
-    
     serde_json::json!({
-        "projectId": stack_project_id,
-        "publishableClientKey": publishable_key
+        "auth_mode": "local",
+        "app_name": "SwiftPOS",
+        "version": env!("CARGO_PKG_VERSION")
     })
 }
 
@@ -156,29 +152,9 @@ pub fn run() {
             
             info!("Database URL loaded from environment");
             
-            // Get Neon Auth project ID from environment
-            let neon_project_id = std::env::var("NEXT_PUBLIC_STACK_PROJECT_ID")
-                .map_err(|_| {
-                    error!("NEXT_PUBLIC_STACK_PROJECT_ID environment variable is not set");
-                    "NEXT_PUBLIC_STACK_PROJECT_ID must be set in environment"
-                })?;
-            
-            info!("Neon Auth project ID loaded from environment");
-            
-            // Get Stack Auth secret key from environment
-            let stack_secret_key = std::env::var("STACK_SECRET_SERVER_KEY")
-                .map_err(|_| {
-                    error!("STACK_SECRET_SERVER_KEY environment variable is not set");
-                    "STACK_SECRET_SERVER_KEY must be set in environment"
-                })?;
-            
-            info!("Stack Auth secret key loaded from environment");
-            
-            // Store state - use the same AppState type as auth commands
+            // Store state — email+password auth, jwt_secret only
             app.manage(Arc::new(RwLock::new(AppState {
                 jwt_secret: jwt_secret.clone(),
-                neon_project_id,
-                stack_secret_key,
             })));
             
             info!("Application state initialized");
@@ -200,12 +176,14 @@ pub fn run() {
             get_auth_config,
             commands::auth::login,
             commands::auth::logout,
+            commands::auth::verify_session,
             commands::auth::register_tenant,
-            commands::auth::verify_neon_token,
-            commands::auth::neon_auth_login,
-            commands::auth::provision_user,
+            commands::auth::change_password,
+            commands::users::get_users,
+            commands::users::create_user,
             commands::tenants::get_tenants,
             commands::tenants::get_tenant,
+            commands::tenants::update_tenant,
             commands::branches::get_branches,
             commands::branches::create_branch,
             commands::categories::get_categories,
@@ -215,7 +193,23 @@ pub fn run() {
             commands::transactions::create_transaction,
             commands::transactions::get_transactions,
             commands::transactions::void_transaction,
+            // Kasir operations
+            commands::kasir::buka_kasir,
+            commands::kasir::tutup_kasir,
+            commands::kasir::get_kasir_shift,
+            commands::kasir::tambah_kas_masuk,
+            commands::kasir::get_kas_masuk,
+            commands::kasir::tambah_pengeluaran,
+            commands::kasir::get_pengeluaran,
+            commands::kasir::get_laporan_tutup_kasir,
+            // Piutang operations
+            commands::piutang::create_piutang,
+            commands::piutang::get_piutang_list,
+            commands::piutang::bayar_piutang,
+            // Dashboard
+            commands::dashboard::get_dashboard_stats,
         ])
+
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

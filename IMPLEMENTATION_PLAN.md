@@ -249,14 +249,14 @@ npx -y mcp-remote "https://mcp.neon.tech/sse" --query "SELECT * FROM tenants"
 | Task | Description | Dependencies |
 |------|-------------|--------------|
 | ADMIN-010 | Create products list page | ADMIN-009 |
-| ADMIN-011 | Implement product image upload | ADMIN-010 |
-| ADMIN-012 | Implement add product form | ADMIN-011 |
+| ADMIN-011 | Implement product fields (HPP, Jual, Supplier, Satuan) | ADMIN-010 |
+| ADMIN-012 | Implement add product form with stock tracking | ADMIN-011 |
 | ADMIN-013 | Implement edit product form | ADMIN-012 |
 | ADMIN-014 | Implement delete product | ADMIN-013 |
 | ADMIN-015 | Add search functionality | ADMIN-014 |
-| ADMIN-016 | Add category filter | ADMIN-015 |
+| ADMIN-016 | Add unit filter dropdown | ADMIN-015 |
 
-**Verification:** Full CRUD for products
+**Verification:** Full CRUD for products with accurate stock metrics (Awal, Tambahan, Terjual, Total)
 
 ### 4.4 Inventory Management
 **Duration:** 4 days
@@ -282,16 +282,16 @@ npx -y mcp-remote "https://mcp.neon.tech/sse" --query "SELECT * FROM tenants"
 
 **Verification:** User management with RBAC
 
-### 4.6 Branches Management
+### 4.6 Unit Management (Branches)
 **Duration:** 3 days
 
 | Task | Description | Dependencies |
 |------|-------------|--------------|
-| ADMIN-025 | Create branches list page | ADMIN-024 |
-| ADMIN-026 | Implement add branch form | ADMIN-025 |
-| ADMIN-027 | Implement edit branch form | ADMIN-026 |
+| ADMIN-025 | Create unit cards grid view | ADMIN-024 |
+| ADMIN-026 | Implement add unit form | ADMIN-025 |
+| ADMIN-027 | Implement edit/delete unit actions | ADMIN-026 |
 
-**Verification:** Branch management works
+**Verification:** Unit management works showcasing product totals and daily sales
 
 ### 4.7 Settings
 **Duration:** 3 days
@@ -304,6 +304,29 @@ npx -y mcp-remote "https://mcp.neon.tech/sse" --query "SELECT * FROM tenants"
 | ADMIN-031 | Implement logo upload | ADMIN-030 |
 
 **Verification:** Settings save correctly
+
+### 4.8 Transactions Management (Admin)
+**Duration:** 3 days
+
+| Task | Description | Dependencies |
+|------|-------------|--------------|
+| ADMIN-032 | Create transactions list page | ADMIN-031 |
+| ADMIN-033 | Implement filters (Type, Status, Date) | ADMIN-032 |
+| ADMIN-034 | Implement export data functionality | ADMIN-033 |
+
+**Verification:** Admin can view, filter, and export all transactions
+
+### 4.9 Piutang Management
+**Duration:** 3 days
+
+| Task | Description | Dependencies |
+|------|-------------|--------------|
+| ADMIN-035 | Create piutang list page | ADMIN-034 |
+| ADMIN-036 | Implement add piutang form | ADMIN-035 |
+| ADMIN-037 | Implement pay installment (cicilan) | ADMIN-036 |
+| ADMIN-038 | Implement piutang filters & search | ADMIN-037 |
+
+**Verification:** Piutang records created and tracked correctly
 
 ---
 
@@ -327,13 +350,14 @@ npx -y mcp-remote "https://mcp.neon.tech/sse" --query "SELECT * FROM tenants"
 ### 5.2 Transaction Processing
 **Duration:** 4 days
 
-| Task | Description | Dependencies |
-|------|-------------|--------------|
-| KASIR-008 | Implement cash payment | KASIR-007 |
-| KASIR-009 | Implement QR payment | KASIR-008 |
-| KASIR-010 | Implement debit card payment | KASIR-009 |
-| KASIR-011 | Implement credit card payment | KASIR-010 |
-| KASIR-012 | Calculate change | KASIR-011 |
+| Task | Description | Status | Dependencies |
+|------|-------------|--------|--|
+| KASIR-008 | Implement Tunai cash payment modal | ✅ UI Done | KASIR-007 |
+| KASIR-009 | Implement Transfer payment modal | ✅ UI Done | KASIR-008 |
+| KASIR-010 | Implement Kredit payment modal (with DP + Sisa Piutang) | ✅ UI Done | KASIR-009 |
+| KASIR-011 | Implement QR payment | ⏳ Pending | KASIR-010 |
+| KASIR-012 | Implement debit card payment | ⏳ Pending | KASIR-011 |
+| KASIR-013 | Calculate change | ✅ UI Done | KASIR-012 |
 
 **Verification:** All payment methods work
 
@@ -358,6 +382,29 @@ npx -y mcp-remote "https://mcp.neon.tech/sse" --query "SELECT * FROM tenants"
 | KASIR-018 | Implement refund transaction | KASIR-017 |
 
 **Verification:** Transaction operations work
+
+### 5.5 Kasir Operations (Non-Transaction)
+**Duration:** 3 days
+
+| Task | Description | Status | Dependencies |
+|------|-------------|--------|--|
+| KASIR-019 | Implement Buka Kasir modal (initial capital) | ✅ UI Done | KASIR-018 |
+| KASIR-020 | Implement Kas Masuk with summary stats | ✅ UI Done | KASIR-019 |
+| KASIR-021 | Implement Pengeluaran with history list | ✅ UI Done | KASIR-020 |
+| KASIR-022 | Implement Tambah Stok (Stock add) | ✅ UI Done | KASIR-021 |
+| KASIR-023 | Implement Bayar Piutang (customer payment) | ✅ UI Done | KASIR-022 |
+| KASIR-024 | Implement Manajemen Piutang (overview modal) | ✅ UI Done | KASIR-023 |
+| KASIR-025 | Implement Tambah Piutang Manual (entry form) | ✅ UI Done | KASIR-024 |
+| KASIR-026 | Implement Tutup Kasir Dashboard (full breakdown) | ✅ UI Done | KASIR-025 |
+| KASIR-027 | Implement Laporan Tutup Kasir page (printable) | ✅ UI Done | KASIR-026 |
+| KASIR-028 | Implement Tambah Kas Baru | ⏳ Pending | KASIR-027 |
+| KASIR-029 | Implement Pengaturan | ⏳ Pending | KASIR-028 |
+| KASIR-030 | Wire Kredit payment DP + Sisa Piutang fields to backend | ⏳ Pending | KASIR-014 |
+| KASIR-031 | Wire Tutup Kasir export to PDF | ⏳ Pending | KASIR-026 |
+| KASIR-032 | Wire Tutup Kasir export to Google Sheets | ⏳ Pending | KASIR-026 |
+| KASIR-033 | Backend: piutang CRUD (create, list, update status) | ⏳ Pending | CORE-005 |
+
+**Verification:** All Non-Transaction operations work perfectly and reflect in reports and cash logs.
 
 ---
 
@@ -592,7 +639,19 @@ Phase 8 (Offline) → Requires Phase 2 + 3
 Phase 9-10 → All previous phases
 ```
 
+## [COMPLETED] Phase 5.5: Backend Stability & SQLx 0.8 Migration
+- [x] Resolve `sqlx::query!` and `sqlx::query_scalar!` compilation errors by migrating to standard query functions.
+- [x] Add explicit `sqlx::Postgres` type arguments to all database queries.
+- [x] Fix duplicate `impl` blocks and missing `From` implementations in `db/mod.rs`.
+- [x] Standardize variable naming (`row` vs `rows`) for single vs multiple record fetches.
+
+## [IN PROGRESS] Phase 6: UI Refinement & Polish
+- [x] Standardize all forms (Login, Add/Edit) to **Light Theme** with high-contrast text.
+- [x] Fix UI contrast issues in Period Selector and Management Tables.
+- [ ] Implement robust error boundary handling for frontend HTMX responses.
+- [ ] Add loading states/spinners for long-running database operations.
+
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** March 17, 2026
+**Document Version:** 1.2  
+**Last Updated:** March 20, 2026

@@ -4,7 +4,7 @@ use crate::middleware;
 use tauri::State;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::commands::auth::AppState;
+use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CategoryResponse {

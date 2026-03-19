@@ -57,70 +57,6 @@ pub struct Tenant {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-impl Tenant {
-    pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
-        let pool = get_db_pool().await?;
-        let row = sqlx::query_as::<_, TenantRow>(
-            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
-             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
-             created_at, updated_at FROM tenants WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_one(&*pool)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => DbError::NotFound(format!("Tenant {} not found", id)),
-            _ => DbError::Sqlx(e),
-        })?;
-        Ok(row.into())
-    }
-    
-    pub async fn find_by_slug(slug: &str) -> DbResult<Self> {
-        let pool = get_db_pool().await?;
-        let row = sqlx::query_as::<_, TenantRow>(
-            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
-             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
-             created_at, updated_at FROM tenants WHERE slug = $1"
-        )
-        .bind(slug)
-        .fetch_one(&*pool)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => DbError::NotFound(format!("Tenant {} not found", slug)),
-            _ => DbError::Sqlx(e),
-        })?;
-        Ok(row.into())
-    }
-    
-    pub async fn find_all() -> DbResult<Vec<Self>> {
-        let pool = get_db_pool().await?;
-        let rows = sqlx::query_as::<_, TenantRow>(
-            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
-             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
-             created_at, updated_at FROM tenants ORDER BY name"
-        )
-        .fetch_all(&*pool)
-        .await
-        .map_err(DbError::Sqlx)?;
-        Ok(rows.into_iter().map(|r| r.into()).collect())
-    }
-    
-    pub async fn create(name: &str, slug: &str, email: &str) -> DbResult<Self> {
-        let pool = get_db_pool().await?;
-        let row = sqlx::query_as::<_, TenantRow>(
-            "INSERT INTO tenants (name, slug, email) VALUES ($1, $2, $3) 
-             RETURNING id, name, slug, address, phone, email, logo_url, application_name, 
-             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
-             created_at, updated_at"
-        )
-        .bind(name)
-        .bind(slug)
-        .bind(email)
-        .fetch_one(&*pool)
-        .await?;
-        Ok(row.into())
-    }
-}
 
 #[derive(Debug, sqlx::FromRow)]
 struct TenantRow {
@@ -163,6 +99,87 @@ impl From<TenantRow> for Tenant {
     }
 }
 
+impl Tenant {
+    pub async fn find_all() -> DbResult<Vec<Self>> {
+        let pool = get_db_pool().await?;
+        let rows = sqlx::query_as::<sqlx::Postgres, TenantRow>(
+            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
+             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
+             created_at, updated_at FROM tenants"
+        )
+        .fetch_all(&*pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+
+    pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+        let pool = get_db_pool().await?;
+        let row = sqlx::query_as::<sqlx::Postgres, TenantRow>(
+            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
+             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
+             created_at, updated_at FROM tenants WHERE id = $1"
+        )
+        .bind(id)
+        .fetch_one(&*pool)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => DbError::NotFound(format!("Tenant {} not found", id)),
+            _ => DbError::Sqlx(e),
+        })?;
+        Ok(row.into())
+    }
+
+    pub async fn find_by_slug(slug: &str) -> DbResult<Self> {
+        let pool = get_db_pool().await?;
+        let row = sqlx::query_as::<sqlx::Postgres, TenantRow>(
+            "SELECT id, name, slug, address, phone, email, logo_url, application_name, 
+             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
+             created_at, updated_at FROM tenants WHERE slug = $1"
+        )
+        .bind(slug)
+        .fetch_one(&*pool)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => DbError::NotFound(format!("Tenant with slug {} not found", slug)),
+            _ => DbError::Sqlx(e),
+        })?;
+        Ok(row.into())
+    }
+
+    pub async fn create(name: &str, slug: &str, email: &str, phone: Option<&str>, address: Option<&str>) -> DbResult<Self> {
+        let pool = get_db_pool().await?;
+        let row = sqlx::query_as::<sqlx::Postgres, TenantRow>(
+            "INSERT INTO tenants (name, slug, email, phone, address) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING id, name, slug, address, phone, email, logo_url, application_name, 
+             subscription_tier, timezone, currency_code, currency_symbol, is_active, 
+             created_at, updated_at"
+        )
+        .bind(name)
+        .bind(slug)
+        .bind(email)
+        .bind(phone)
+        .bind(address)
+        .fetch_one(&*pool)
+        .await?;
+        Ok(row.into())
+    }
+
+    pub async fn update(&self) -> DbResult<()> {
+        let pool = get_db_pool().await?;
+        sqlx::query(
+            "UPDATE tenants SET name = $1, address = $2, phone = $3, updated_at = NOW() WHERE id = $4"
+        )
+        .bind(&self.name)
+        .bind(&self.address)
+        .bind(&self.phone)
+        .bind(self.id)
+        .execute(&*pool)
+        .await?;
+        Ok(())
+    }
+}
+
 /// User model
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct User {
@@ -180,10 +197,32 @@ pub struct User {
 }
 
 impl User {
+    pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
+        let pool = get_db_pool().await?;
+        let row = sqlx::query_as::<sqlx::Postgres, UserRow>(
+            "SELECT id, tenant_id, branch_id, email, password_hash, full_name, role, is_active, 
+             last_login, created_at, updated_at FROM users WHERE id = $1"
+        )
+        .bind(id)
+        .fetch_one(&*pool)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => DbError::NotFound(format!("User {} not found", id)),
+            _ => DbError::Sqlx(e),
+        })?;
+        Ok(row.into())
+    }
+    
+    pub async fn find_by_id_string(id: &str) -> DbResult<Self> {
+        let uuid = uuid::Uuid::parse_str(id)
+            .map_err(|_| DbError::Validation(format!("Invalid UUID: {}", id)))?;
+        Self::find_by_id(uuid).await
+    }
+    
     pub async fn find_by_email(email: &str) -> DbResult<Self> {
         let pool = get_db_pool().await?;
-        let row = sqlx::query_as::<_, UserRow>(
-            "SELECT id, tenant_id, branch_id, email, full_name, role, is_active, 
+        let row = sqlx::query_as::<sqlx::Postgres, UserRow>(
+            "SELECT id, tenant_id, branch_id, email, password_hash, full_name, role, is_active, 
              last_login, created_at, updated_at FROM users WHERE email = $1"
         )
         .bind(email)
@@ -221,6 +260,18 @@ impl User {
             .execute(&*pool)
             .await?;
         Ok(())
+    }
+
+    pub async fn find_by_tenant(tenant_id: uuid::Uuid) -> DbResult<Vec<Self>> {
+        let pool = get_db_pool().await?;
+        let rows = sqlx::query_as::<sqlx::Postgres, UserRow>(
+            "SELECT id, tenant_id, branch_id, email, password_hash, full_name, role, is_active, 
+             last_login, created_at, updated_at FROM users WHERE tenant_id = $1"
+        )
+        .bind(tenant_id)
+        .fetch_all(&*pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 }
 
@@ -274,7 +325,7 @@ pub struct Branch {
 impl Branch {
     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
         let pool = get_db_pool().await?;
-        let row = sqlx::query_as::<_, BranchRow>(
+        let row = sqlx::query_as::<sqlx::Postgres, BranchRow>(
             "SELECT id, tenant_id, code, name, address, phone, is_main_branch, 
              is_active, created_at FROM branches WHERE id = $1"
         )
@@ -290,7 +341,7 @@ impl Branch {
     
     pub async fn find_by_tenant(tenant_id: uuid::Uuid) -> DbResult<Vec<Self>> {
         let pool = get_db_pool().await?;
-        let rows = sqlx::query_as::<_, BranchRow>(
+        let rows = sqlx::query_as::<sqlx::Postgres, BranchRow>(
             "SELECT id, tenant_id, code, name, address, phone, is_main_branch, 
              is_active, created_at FROM branches WHERE tenant_id = $1 AND is_active = true"
         )
@@ -346,7 +397,7 @@ pub struct Category {
 impl Category {
     pub async fn find_by_tenant(tenant_id: uuid::Uuid) -> DbResult<Vec<Self>> {
         let pool = get_db_pool().await?;
-        let rows = sqlx::query_as::<_, CategoryRow>(
+        let rows = sqlx::query_as::<sqlx::Postgres, CategoryRow>(
             "SELECT id, tenant_id, name, description, color, sort_order, is_active, 
              created_at FROM categories WHERE tenant_id = $1 AND is_active = true 
              ORDER BY sort_order, name"
@@ -400,6 +451,10 @@ pub struct Product {
     pub parent_product_id: Option<uuid::Uuid>,
     pub variant_name: Option<String>,
     pub unit: String,
+    pub hpp: f64,
+    pub selling_price: f64,
+    pub stock: i32,
+    pub stock_min: i32,
     pub is_active: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -408,10 +463,11 @@ pub struct Product {
 impl Product {
     pub async fn find_by_id(id: uuid::Uuid) -> DbResult<Self> {
         let pool = get_db_pool().await?;
-        let row = sqlx::query_as::<_, ProductRow>(
+        let row = sqlx::query_as::<sqlx::Postgres, ProductRow>(
             "SELECT id, tenant_id, category_id, sku, barcode, name, description, 
              image_url, is_variant, parent_product_id, variant_name, unit, 
-             is_active, created_at, updated_at FROM products WHERE id = $1"
+             hpp, selling_price, stock, stock_min, is_active, created_at, updated_at 
+             FROM products WHERE id = $1"
         )
         .bind(id)
         .fetch_one(&*pool)
@@ -425,11 +481,11 @@ impl Product {
     
     pub async fn find_by_tenant(tenant_id: uuid::Uuid) -> DbResult<Vec<Self>> {
         let pool = get_db_pool().await?;
-        let rows = sqlx::query_as::<_, ProductRow>(
+        let rows = sqlx::query_as::<sqlx::Postgres, ProductRow>(
             "SELECT id, tenant_id, category_id, sku, barcode, name, description, 
              image_url, is_variant, parent_product_id, variant_name, unit, 
-             is_active, created_at, updated_at FROM products WHERE tenant_id = $1 
-             AND is_active = true ORDER BY name"
+             hpp, selling_price, stock, stock_min, is_active, created_at, updated_at 
+             FROM products WHERE tenant_id = $1 AND is_active = true ORDER BY name"
         )
         .bind(tenant_id)
         .fetch_all(&*pool)
@@ -452,6 +508,10 @@ struct ProductRow {
     parent_product_id: Option<uuid::Uuid>,
     variant_name: Option<String>,
     unit: String,
+    hpp: f64,
+    selling_price: f64,
+    stock: i32,
+    stock_min: i32,
     is_active: bool,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
@@ -472,6 +532,10 @@ impl From<ProductRow> for Product {
             parent_product_id: row.parent_product_id,
             variant_name: row.variant_name,
             unit: row.unit,
+            hpp: row.hpp,
+            selling_price: row.selling_price,
+            stock: row.stock,
+            stock_min: row.stock_min,
             is_active: row.is_active,
             created_at: row.created_at,
             updated_at: row.updated_at,

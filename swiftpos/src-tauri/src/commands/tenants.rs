@@ -4,7 +4,7 @@ use crate::middleware;
 use tauri::State;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::commands::auth::AppState;
+use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TenantResponse {
@@ -33,6 +33,14 @@ pub struct GetTenantRequest {
 #[derive(Debug, Deserialize)]
 pub struct GetTenantsRequest {
     pub token: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct UpdateTenantRequest {
+    pub token: String,
+    pub name: String,
+    pub address: Option<String>,
+    pub phone: Option<String>,
 }
 
 impl From<db::Tenant> for TenantResponse {
@@ -109,4 +117,36 @@ pub async fn get_tenant(
         .map_err(|e| format!("Tenant not found: {}", e))?;
     
     Ok(tenant.into())
+}
+
+#[tauri::command]
+pub async fn update_tenant(
+    request: UpdateTenantRequest,
+    state: State<'_, Arc<RwLock<AppState>>>,
+) -> Result<(), String> {
+    let app_state = state.read().await;
+    let auth = middleware::validate_token(&request.token, &app_state).await?;
+    drop(app_state);
+
+    if auth.role != "owner" && auth.role != "super_admin" {
+        return Err("Hanya pemilik yang dapat mengubah pengaturan toko".to_string());
+    }
+
+    let tenant_id = auth.tenant_id
+        .ok_or_else(|| "Tenant ID tidak ditemukan".to_string())?;
+    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id)
+        .map_err(|e| format!("Invalid tenant ID: {}", e))?;
+
+    let mut tenant = db::Tenant::find_by_id(tenant_uuid)
+        .await
+        .map_err(|e| format!("Gagal mengambil data toko: {}", e))?;
+
+    tenant.name = request.name;
+    tenant.address = request.address;
+    tenant.phone = request.phone;
+
+    tenant.update().await
+        .map_err(|e| format!("Gagal memperbarui data toko: {}", e))?;
+
+    Ok(())
 }

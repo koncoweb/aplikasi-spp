@@ -1,0 +1,62 @@
+﻿cargo : [1m[92m    
+Checking[0m swiftpos v1.0.1 (C:
+\projects\swiftpos2026\swiftpos\
+src-tauri)
+At line:1 char:1
++ cargo check --all-targets 
+--all-features --color always 
+2>&1 | Out-Fi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : N 
+   otSpecified: ([1m[92m      
+  Ch...tpos\src-tauri):String   
+ ) [], RemoteException
+    + FullyQualifiedErrorId : N 
+   ativeCommandError
+ 
+[1m[93mwarning[0m[1m[97m: 
+unused import: 
+`crate::middleware`[0m
+ [1m[96m--> 
+[0msrc\commands\auth.rs:9:5
+  [1m[96m|[0m
+[1m[96m9[0m [1m[96m|[0m 
+use crate::middleware;
+  [1m[96m|[0m     
+[1m[93m^^^^^^^^^^^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= 
+[0m[1m[97mnote[0m: 
+`#[warn(unused_imports)]` (part 
+of `#[warn(unused)]`) on by 
+default
+
+[1m[93mwarning[0m[1m[97m: 
+unused import: `Serialize`[0m
+ [1m[96m--> 
+[0msrc\commands\users.rs:1:26
+  [1m[96m|[0m
+[1m[96m1[0m [1m[96m|[0m 
+use serde::{Deserialize, 
+Serialize};
+  [1m[96m|[0m                
+          [1m[93m^^^^^^^^^[0m
+
+[1m[93mwarning[0m: 
+`swiftpos` (lib test) generated 
+2 warnings (1 duplicate) (run 
+`cargo fix --lib -p swiftpos 
+--tests` to apply 1 suggestion)
+[1m[93mwarning[0m: 
+`swiftpos` (lib) generated 2 
+warnings (1 duplicate) (run 
+`cargo fix --lib -p swiftpos` 
+to apply 1 suggestion)
+[1m[92m    Finished[0m ]8;;h
+ttps://doc.rust-lang.org/cargo/r
+eference/profiles.html#default-p
+rofiles\`dev` profile 
+[unoptimized + 
+debuginfo]]8;;\ target(s) in 
+7.68s

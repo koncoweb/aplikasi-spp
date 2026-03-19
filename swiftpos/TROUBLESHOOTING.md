@@ -265,6 +265,27 @@ Then set environment variables at deployment time.
 
 ---
 
+## SQLx 0.8 Migration & Compilation Errors
+
+### Issue: `sqlx::query!` Macro Fails to Compile
+**Symptoms:** Error messages related to type inference or "expected 1 argument, found 2".
+**Cause:** `sqlx` 0.8 macros can sometimes fail with complex Tauri/HTMX response types or when the database driver isn't explicitly resolved.
+**Solution:** Use standard query functions instead of macros:
+- Replace `sqlx::query_as!(T, "...")` with `sqlx::query_as::<sqlx::Postgres, T>("...")`.
+- Replace `sqlx::query_scalar!("...")` with `sqlx::query_scalar::<sqlx::Postgres, Type>("...")`.
+
+### Issue: `COALESCE` with Aggregate Functions
+**Symptoms:** `unwrap_or(0)` or `unwrap_or(0.0)` returning errors or being redundant.
+**Cause:** When using `COALESCE(SUM(...), 0)` in SQL, the result is guaranteed to be non-null.
+**Solution:** `sqlx::query_scalar` will return the type directly (e.g., `i64` or `f64`) without needing an extra `unwrap_or` on the Rust side if the SQL handles it.
+
+### Issue: "Duplicate definition" in `db/mod.rs`
+**Symptoms:** `error[E0592]: duplicate definitions with name ...`
+**Cause:** Multiple `impl` blocks for the same struct (e.g., `Tenant`) containing conflicting or identical methods.
+**Solution:** Consolidate all methods into a single `impl StructName` block.
+
+---
+
 ## Best Practices for Future Development
 
 1. **Always test release builds** - Don't rely solely on development mode testing
